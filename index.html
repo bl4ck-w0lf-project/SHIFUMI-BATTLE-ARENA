@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHIFUMI BATTLE ARENA - Joue et domine le classement</title>
+
+  <meta name="description" content="Affrontez des joueurs du monde entier à SBA, le jeu de Shifumi (Pierre-Feuille-Ciseaux) ultime. Rejoignez la communauté, grimpez dans le classement et devenez le maître incontesté de l'arène.">
+
+  <!-- Mots-clés (moins important qu'avant, mais peut être utile) -->
+  <meta name="keywords" content="shifumi, pierre feuille ciseaux, jeu en ligne, battle arena, classement, multijoueur">
+
+  <!-- Auteur du site -->
+  <meta name="author" content="Ricardo">
+
+  <!-- Robots (indique aux moteurs de recherche d'indexer la page et de suivre les liens) -->
+  <meta name="robots" content="index, follow">
+
+  <!-- Balises Open Graph (pour un partage optimisé sur Facebook, LinkedIn, etc.) -->
+  <meta property="og:title" content="SBA - Shifumi Battle Arena">
+  <meta property="og:description" content="Le jeu de Shifumi ultime. Affrontez des joueurs du monde entier !">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.votredomaine.com">
+  <meta property="og:image" content="https://www.votredomaine.com/images/og-image.jpg">
+  <meta property="og:site_name" content="SBA - Shifumi Battle Arena">
+
+  <!-- Balises Twitter Card (pour un partage optimisé sur Twitter) -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SBA - Shifumi Battle Arena">
+  <meta name="twitter:description" content="Le jeu de Shifumi ultime. Affrontez des joueurs du monde entier !">
+  <meta name="twitter:image" content="https://www.votredomaine.com/images/twitter-image.jpg">
+
+  <!-- Balise pour la langue du site (important pour le SEO international) -->
+  <meta name="language" content="fr">
+
+  <!-- Favicon classique (format ICO) - La plus compatible -->
+  <link rel="shortcut icon" href="logobg.png" type="image/x-icon">
+
+  <!-- Favicons pour les navigateurs modernes (format PNG) -->
+  <link rel="icon" type="image/png" sizes="16x16" href="logobg.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="logobg.png">
+
+  <!-- Icône pour les appareils Apple (iPhone, iPad) -->
+  <link rel="apple-touch-icon" sizes="180x180" href="logobg.png">
+
+  <!-- Manifeste pour les applications web progressives (PWA) -->
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!-- Couleur de thème pour la barre d'adresse du navigateur mobile -->
+  <meta name="theme-color" content="#02b7f5">
+
+  <!-- 1. Tailwind CSS CDN + darkMode config -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#02b7f5',
+            'primary-dark': '#0066ff',
+            win: '#22c55e',
+            lose: '#ef4444',
+            draw: '#f59e0b',
+            gold: '#fbbf24',
+          },
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            rajdhani: ['Rajdhani', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+          },
+          animation: {
+            'fade-in-up': 'fadeInUp 0.8s ease-out',
+            'fade-in': 'fadeIn 1s ease-out',
+            'glow-pulse': 'glow-pulse 3s infinite',
+            'border-pulse': 'border-pulse 2s infinite',
+            'slide-down': 'slideDown 0.3s ease-out',
+          },
+          keyframes: {
+            fadeInUp: {
+              from: { opacity: '0', transform: 'translateY(30px)' },
+              to: { opacity: '1', transform: 'translateY(0)' },
+            },
+            fadeIn: {
+              from: { opacity: '0' },
+              to: { opacity: '1' },
+            },
+            'glow-pulse': {
+              '0%, 100%': { boxShadow: '0 0 20px #02b7f5, 0 0 40px #02b7f5' },
+              '50%': { boxShadow: '0 0 30px #02b7f5, 0 0 60px #02b7f5' },
+            },
+            'border-pulse': {
+              '0%, 100%': { borderColor: '#02b7f5' },
+              '50%': { borderColor: 'rgba(2, 183, 245, 0.4)' },
+            },
+            slideDown: {
+              from: { transform: 'translateY(-100%)' },
+              to: { transform: 'translateY(0)' },
+            },
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- 2. Font Awesome 6.5.1 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- 3. Boxicons 2.1.4 -->
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+
+  <!-- 4. Google Fonts : Orbitron + Rajdhani + Outfit -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- 5. Anime.js 3.2.1 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+  <!-- Styles personnalisés -->
+  <style>
+    /* Variables */
+    :root {
+      --primary: #02b7f5;
+      --dark-bg: #0a0f1e;
+      --card-bg: #0d1b2a;
+      --win: #22c55e;
+      --lose: #ef4444;
+      --draw: #f59e0b;
+      --gold: #fbbf24;
+    }
+        /* Smooth scroll pour toute la page */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Optionnel : personnalisation de la durée et de la courbe d'accélération */
+    @media (prefers-reduced-motion: no-preference) {
+      html {
+        scroll-behavior: smooth;
+      }
+    }
+
+    /* Hero letter idle animation */
+    .hero-letter {
+      display: inline-block;
+      animation: hero-idle 4s ease-in-out infinite alternate;
+    }
+    @keyframes hero-idle {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.015); }
+    }
+
+    /* Menu mobile */
+    .mobile-menu-open {
+      transform: translateY(0) !important;
+    }
+
+    /* Scrollbar fine */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #02b7f5;
+      border-radius: 20px;
+    }
+  </style>
+</head>
+<body class="dark:bg-[#0a0f1e] bg-[#f0f9ff] dark:text-white text-[#0a0f1e] font-outfit antialiased transition-colors duration-300">
+
+  <!-- NAVBAR FIXE -->
+  <nav id="navbar" class="fixed top-0 left-0 w-full z-50 py-3 px-6 lg:px-12 transition-all duration-300 dark:bg-[#0a0f1e]/80 bg-white/80 backdrop-blur-md border-b dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)]">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      
+      <!-- GAUCHE : Logo SBA (simplifié, plus de SVG) -->
+      <div class="flex justify-center gap-2 ">
+        <div> <img src="logobg.png" alt="" width="70px" height="50px"> </div>
+        <div>
+          <div class="font-orbitron font-black text-xl bg-gradient-to-r from-primary to-white bg-clip-text text-transparent tracking-wider drop-shadow-[0_0_12px_rgba(2,183,245,0.5)]">SBA</div>
+          <div class="font-rajdhani text-[18px] uppercase tracking-widest dark:text-[#94a3b8] text-[#64748b]">Shifumi Battle Arena</div>
+        </div>
+      </div>
+
+      <!-- CENTRE : Liens desktop -->
+      <div class="hidden md:flex items-center gap-6">
+        <a href="index.html" class="flex items-center gap-1 font-rajdhani text-md font-bold dark:text-[#94a3b8] text-[#64748b]  transition ">
+           Accueil
+        </a>
+        <a href="#fonctions" class="flex items-center gap-1 font-rajdhani text-md font-bold dark:text-[#94a3b8] text-[#64748b]  transition">
+          
+          Fonctionnalités
+        </a>
+        <a href="#regle" class="flex items-center gap-1 font-rajdhani text-md font-bold dark:text-[#94a3b8] text-[#64748b]  transition">
+          Règles
+        </a>
+      </div>
+
+      <!-- DROITE : Actions -->
+      <div class="flex items-center gap-3">
+        <!-- Toggle thème -->
+        <button id="themeToggle" class="w-9 h-9 rounded-full border dark:border-[rgba(2,183,245,0.3)] border-[rgba(2,183,245,0.3)] flex items-center justify-center hover:bg-[rgba(2,183,245,0.1)] transition">
+          <i id="themeIcon" class="fa-solid fa-moon text-primary"></i>
+        </button>
+
+        <!-- Bouton Se Connecter -->
+        <a href="player/connexion.html" class="hidden md:flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-[#02b7f5] to-[#0066ff] text-white font-rajdhani font-semibold text-sm shadow-[0_4px_15px_rgba(2,183,245,0.35)] hover:scale-105 hover:shadow-[0_0_30px_rgba(2,183,245,0.6)] transition">
+          <i class="fa-solid fa-right-to-bracket"></i> Se Connecter
+        </a>
+
+        <!-- Hamburger mobile -->
+        <button id="hamburgerBtn" class="lg:hidden text-2xl text-primary p-2">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- MENU MOBILE (drawer slide-down) -->
+    <div id="mobileMenu" style="display:none" class="absolute top-16 left-0 w-full dark:bg-[#0a0f1e]/95 bg-white/80 backdrop-blur-lg border-b dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)] py-6 px-8 hidden flex-col gap-4 transform -translate-y-full transition-transform duration-300">
+      <div class="flex justify-end">
+        <button id="closeMenuBtn"><i class="fa-solid fa-xmark text-2xl text-primary"></i></button>
+      </div>
+      <a href="index.html" class="flex items-center gap-2 font-rajdhani text-base dark:text-white text-[#0a0f1e] py-2"><i class="fa-solid fa-house text-primary w-6"></i> Accueil</a>
+      <a href="#fonctions" class="flex items-center gap-2 font-rajdhani text-base dark:text-white text-[#0a0f1e] py-2"><i class="fa-solid fa-gauge-high text-primary w-6"></i> Fonctionnalités</a>
+      <a href="#regle" class="flex items-center gap-2 font-rajdhani text-base dark:text-white text-[#0a0f1e] py-2"><i class="fa-solid fa-ranking-star text-primary w-6"></i> Règles</a>
+      <a href="player/connexion.html" class="mt-4 flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-[#02b7f5] to-[#0066ff] text-white font-rajdhani font-semibold"><i class="fa-solid fa-right-to-bracket"></i> Se Connecter</a>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION (fond uni) -->
+  <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 dark:bg-[#0a0f1e] bg-[#f0f9ff]">
+    <!-- Contenu hero -->
+    <div class="relative z-10 text-center px-6 max-w-5xl mx-auto">
+      <!-- Badge intro -->
+      <!-- <div class="inline-flex items-center gap-2 bg-[rgba(2,183,245,0.08)] border border-[rgba(2,183,245,0.25)] rounded-full px-4 py-2 mb-8 animate-fade-in-up">
+        <i class="bx bx-joystick text-primary"></i>
+        <span class="font-rajdhani font-bold text-xs uppercase tracking-widest text-primary">LE JEU DE SHIFUMI ULTIME</span>
+      </div> -->
+
+      <!-- Grand titre animé "SHIFUMI" (anime.js) -->
+      <h1 class="font-orbitron font-black text-7xl sm:text-8xl lg:text-9xl tracking-wider mb-4">
+        <span class=" hero-letter inline-block" style="opacity:0;">S</span>
+        <span class=" hero-letter inline-block" style="opacity:0;">H</span>
+        <span class=" hero-letter inline-block" style="opacity:0;">I</span>
+        <span class=" hero-letter inline-block" style="opacity:0;">F</span>
+        <span class=" hero-letter inline-block" style="opacity:0;">U</span>
+        <span class=" hero-letter inline-block" style="opacity:0;">M</span>
+        <span class=" hero-letter inline-block" style="opacity:0;">I</span>
+      </h1>
+
+      <!-- Ligne BATTLE ARENA -->
+      <div class="font-orbitron font-bold text-3xl sm:text-4xl lg:text-5xl bg-gradient-to-r from-primary to-[#0066ff] bg-clip-text text-transparent tracking-wider mb-4 animate-fade-in-up" style="animation-delay: 0.2s;">
+        BATTLE ARENA
+      </div>
+
+      <!-- Sous-titre -->
+      <p class="font-rajdhani text-xl lg:text-2xl dark:text-[#94a3b8] text-[#64748b] mb-4 animate-fade-in-up" style="animation-delay: 0.4s;">
+        Pierre. Feuille. Ciseaux. Mais en mieux.
+      </p>
+
+      <!-- Description -->
+      <p class="font-outfit text-base lg:text-lg dark:text-[#64748b] text-[#475569] max-w-2xl mx-auto animate-fade-in-up" style="animation-delay: 0.6s;">
+        Affrontez des joueurs du monde entier, grimpez dans le classement et devenez le maître incontesté du Shifumi.
+      </p>
+
+      <!-- Boutons CTA -->
+      <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mt-10">
+        <a href="player/connexion.html" class="flex items-center gap-3 px-10 py-4 rounded-full bg-gradient-to-r from-[#02b7f5] to-[#0066ff] text-white font-orbitron font-bold text-sm shadow-[0_6px_30px_rgba(2,183,245,0.5)] hover:scale-105 hover:shadow-[0_0_40px_rgba(2,183,245,0.8)] transition animate-fade-in-up" style="animation-delay: 1s;">
+          <i class="bx bx-joystick text-lg"></i> JOUER MAINTENANT <i class="fa-solid fa-arrow-right text-sm ml-1"></i>
+        </a>
+        <!-- <a href="dashboard.html#classement" class="flex items-center gap-2 px-8 py-4 rounded-full border-2 border-primary text-primary font-rajdhani font-semibold text-sm hover:bg-[rgba(2,183,245,0.1)] hover:scale-105 transition animate-fade-in-up" style="animation-delay: 1.2s;">
+          <i class="fa-solid fa-ranking-star"></i> VOIR LE CLASSEMENT
+        </a> -->
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS SECTION -->
+  <section class="py-20 px-6 dark:bg-[#080c18] bg-[#e0f2fe] border-t border-b dark:border-[rgba(2,183,245,0.1)] border-[rgba(2,183,245,0.1)]">
+    <div class="max-w-4xl mx-auto text-center">
+      <div class="font-rajdhani font-bold text-2xl uppercase tracking-widest text-primary mb-3">EN CHIFFRES</div>
+      <h2 class="font-orbitron font-bold text-2xl lg:text-3xl dark:text-white text-[#0a0f1e] mb-3">La communauté SBA grandit chaque jour</h2>
+      <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569] mb-12">Des milliers de joueurs t'attendent</p>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <!-- Card 1 -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-8 border dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)] hover:border-primary hover:-translate-y-1 transition shadow-lg">
+          <div class="inline-block p-4 rounded-xl bg-[rgba(2,183,245,0.1)] text-primary mb-6">
+            <i class="bx bx-group text-3xl"></i>
+          </div>
+          <div class="font-orbitron font-black text-4xl text-primary drop-shadow-[0_0_15px_rgba(2,183,245,0.4)]">12,847</div>
+          <div class="font-rajdhani font-bold text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569] mt-2">JOUEURS ACTIFS</div>
+          <div class="flex items-center justify-center gap-2 mt-2 text-win">
+            <i class="fa-solid fa-arrow-trend-up text-xs"></i>
+            <span class="font-outfit text-xs">+234 cette semaine</span>
+          </div>
+        </div>
+        <!-- Card 2 -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-8 border dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)] hover:border-win hover:-translate-y-1 transition shadow-lg">
+          <div class="inline-block p-4 rounded-xl bg-[rgba(34,197,94,0.1)] text-win mb-6">
+            <i class="bx bx-joystick text-3xl"></i>
+          </div>
+          <div class="font-orbitron font-black text-4xl text-win">489,203</div>
+          <div class="font-rajdhani font-bold text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569] mt-2">PARTIES JOUÉES</div>
+          <div class="flex items-center justify-center gap-2 mt-2 text-win">
+            <i class="fa-solid fa-arrow-trend-up text-xs"></i>
+            <span class="font-outfit text-xs">+1,204 aujourd'hui</span>
+          </div>
+        </div>
+        <!-- Card 3 -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-8 border dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)] hover:border-draw hover:-translate-y-1 transition shadow-lg">
+          <div class="inline-block p-4 rounded-xl bg-[rgba(245,158,11,0.1)] text-draw mb-6">
+            <i class="bx bx-world text-3xl"></i>
+          </div>
+          <div class="font-orbitron font-black text-4xl text-draw">47</div>
+          <div class="font-rajdhani font-bold text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569] mt-2">PAYS REPRÉSENTÉS</div>
+          <div class="flex items-center justify-center gap-2 mt-2 text-draw">
+            <i class="fa-solid fa-arrow-trend-up text-xs"></i>
+            <span class="font-outfit text-xs">5 continents</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMMENT JOUER SECTION -->
+  <section class="py-24 px-6 dark:bg-[#0a0f1e] bg-[#f0f9ff]" id="regle">
+    <div class="max-w-5xl mx-auto text-center">
+      <div class="flex justify-center items-center gap-2 font-rajdhani font-bold text-2xl uppercase tracking-widest text-primary mb-3">
+        COMMENT JOUER ???
+      </div>
+      <h2 class="font-orbitron font-bold text-2xl lg:text-3xl dark:text-white text-[#0a0f1e] mb-4">3 symboles. 1 règle simple. Infini fun.</h2>
+      <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569] mb-12">Maîtrise les bases et écrase tes adversaires</p>
+
+      <!-- 3 symboles cards avec TES SVG -->
+      <div class="grid md:grid-cols-3 gap-6 mb-16">
+        <!-- Pierre - TON SVG -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-8 border dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)] hover:border-primary hover:scale-105 transition shadow-lg group">
+          <svg width="80" height="80" viewBox="0 0 256 256" fill="#02b7f5" xmlns="http://www.w3.org/2000/svg" class="mx-auto group-hover:scale-110 transition">
+            <path d="M200,80H184V64a31.97943,31.97943,0,0,0-56-21.13208A31.97443,31.97443,0,0,0,72.20508,60.4231,31.978,31.978,0,0,0,24,88v40a104,104,0,0,0,208,0V112A32.03635,32.03635,0,0,0,200,80ZM152,48a16.01833,16.01833,0,0,1,16,16V80H136V64A16.01833,16.01833,0,0,1,152,48ZM88,64a16,16,0,0,1,32,0v40a16,16,0,0,1-32,0V64ZM40,88a16,16,0,0,1,32,0v16a16,16,0,0,1-32,0Zm88,128a88.10627,88.10627,0,0,1-87.9209-84.249A31.94065,31.94065,0,0,0,80,125.13208a31.92587,31.92587,0,0,0,44.58057,3.34595,32.23527,32.23527,0,0,0,11.79443,11.4414A47.906,47.906,0,0,0,120,176a8,8,0,0,0,16,0,32.03635,32.03635,0,0,1,32-32,8,8,0,0,0,0-16H152a16.01833,16.01833,0,0,1-16-16V96h64a16.01833,16.01833,0,0,1,16,16v16A88.09957,88.09957,0,0,1,128,216Z"></path>
+          </svg>
+          <div class="font-orbitron font-bold text-lg mt-4 text-primary">PIERRE</div>
+          <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569]">Solide et résistant</p>
+        </div>
+        <!-- Feuille - TON SVG -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-8 border dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)] hover:border-win hover:scale-105 transition shadow-lg group">
+          <svg width="80" height="80" viewBox="0 0 485 485" fill="#22c55e" xmlns="http://www.w3.org/2000/svg" class="mx-auto group-hover:scale-110 transition">
+            <path d="M382.5,69.429c-7.441,0-14.5,1.646-20.852,4.573c-4.309-23.218-24.7-40.859-49.148-40.859 c-7.68,0-14.958,1.744-21.467,4.852C285.641,16.205,265.932,0,242.5,0c-23.432,0-43.141,16.206-48.533,37.995 c-6.508-3.107-13.787-4.852-21.467-4.852c-27.57,0-50,22.43-50,50v122.222c-6.129-2.686-12.891-4.187-20-4.187 c-27.57,0-50,22.43-50,50V354c0,72.233,58.766,131,131,131h118c72.233,0,131-58.767,131-131V119.429 C432.5,91.858,410.07,69.429,382.5,69.429z M402.5,354c0,55.691-45.309,101-101,101h-118c-55.691,0-101-45.309-101-101V251.178 c0-11.028,8.972-20,20-20s20,8.972,20,20v80h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30V50 c0-11.028,8.972-20,20-20c11.028,0,20,8.972,20,20v191.178h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30v-121.75 c0-11.028,8.972-20,20-20s20,8.972,20,20V354z"></path>
+          </svg>
+          <div class="font-orbitron font-bold text-lg mt-4 text-win">FEUILLE</div>
+          <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569]">Souple et couvre tout</p>
+        </div>
+        <!-- Ciseaux - TON SVG -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-8 border dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)] hover:border-draw hover:scale-105 transition shadow-lg group">
+          <svg width="80" height="80" viewBox="0 0 32 32" fill="#f59e0b" xmlns="http://www.w3.org/2000/svg" class="mx-auto group-hover:scale-110 transition">
+            <path d="M 11.40625 6.96875 C 10.578125 6.953125 9.890625 7.125 9.46875 7.25 C 9.457031 7.25 9.449219 7.25 9.4375 7.25 L 6.9375 8.03125 C 4.003906 8.933594 2 11.652344 2 14.71875 L 2 20 C 2 23.855469 5.144531 27 9 27 L 18.90625 27 C 20.125 27.027344 21.304688 26.3125 21.78125 25.125 C 22.082031 24.371094 22.039063 23.578125 21.75 22.875 C 22.363281 22.550781 22.882813 22.027344 23.15625 21.34375 C 23.46875 20.558594 23.417969 19.722656 23.09375 19 L 27 19 C 28.644531 19 30 17.644531 30 16 C 30 14.355469 28.644531 13 27 13 L 25.46875 13 L 25.875 12.875 C 27.449219 12.398438 28.351563 10.699219 27.875 9.125 C 27.398438 7.550781 25.699219 6.648438 24.125 7.125 L 15.6875 9.71875 C 15.613281 9.53125 15.527344 9.328125 15.40625 9.125 C 14.90625 8.289063 13.894531 7.34375 12.28125 7.0625 C 11.980469 7.011719 11.683594 6.972656 11.40625 6.96875 Z M 25.125 9 C 25.515625 9.042969 25.847656 9.3125 25.96875 9.71875 C 26.132813 10.257813 25.820313 10.804688 25.28125 10.96875 L 18.4375 13.03125 L 18.78125 14.15625 L 18.78125 15 L 27 15 C 27.566406 15 28 15.433594 28 16 C 28 16.566406 27.566406 17 27 17 L 20.40625 17 L 17.78125 15.96875 C 17.402344 15.816406 17.011719 15.742188 16.625 15.75 L 16.09375 11.65625 L 24.71875 9.03125 C 24.855469 8.988281 24.996094 8.984375 25.125 9 Z M 11.375 9.03125 C 11.566406 9.03125 11.765625 9.03125 11.9375 9.0625 C 13.011719 9.25 13.425781 9.71875 13.6875 10.15625 C 13.949219 10.59375 13.96875 10.90625 13.96875 10.90625 C 13.96875 10.925781 13.96875 10.949219 13.96875 10.96875 L 14.8125 17.40625 C 14.820313 17.4375 14.832031 17.46875 14.84375 17.5 C 14.96875 18.027344 14.652344 18.53125 14.125 18.65625 C 13.800781 18.734375 13.636719 18.691406 13.46875 18.59375 C 13.300781 18.496094 13.09375 18.289063 12.9375 17.84375 L 11.6875 13 C 11.609375 12.703125 11.398438 12.460938 11.121094 12.339844 C 10.839844 12.21875 10.519531 12.230469 10.25 12.375 L 8.59375 13.28125 C 8.109375 13.546875 7.933594 14.15625 8.203125 14.640625 C 8.46875 15.125 9.078125 15.300781 9.5625 15.03125 L 10.0625 14.75 L 11.03125 18.4375 C 11.039063 18.46875 11.050781 18.5 11.0625 18.53125 C 11.332031 19.304688 11.792969 19.925781 12.4375 20.3125 C 12.964844 20.628906 13.578125 20.75 14.1875 20.6875 C 13.871094 20.980469 13.609375 21.355469 13.4375 21.78125 C 12.980469 22.925781 13.269531 24.183594 14.09375 25 L 9 25 C 6.226563 25 4 22.773438 4 20 L 4 14.71875 C 4 12.519531 5.429688 10.585938 7.53125 9.9375 L 10.03125 9.1875 C 10.234375 9.125 10.804688 9.03125 11.375 9.03125 Z M 16.8125 17.78125 C 16.886719 17.792969 16.957031 17.78125 17.03125 17.8125 L 20.75 19.3125 C 21.273438 19.523438 21.523438 20.070313 21.3125 20.59375 C 21.101563 21.117188 20.523438 21.367188 20 21.15625 L 16.28125 19.6875 C 16.226563 19.667969 16.203125 19.621094 16.15625 19.59375 C 16.550781 19.085938 16.804688 18.445313 16.8125 17.78125 Z M 16.1875 21.90625 C 16.320313 21.90625 16.460938 21.917969 16.59375 21.96875 L 17.9375 22.5 L 19.25 23.03125 L 19.375 23.0625 C 19.898438 23.273438 20.148438 23.851563 19.9375 24.375 C 19.785156 24.757813 19.445313 24.980469 19.0625 25 C 19.050781 25 19.042969 25 19.03125 25 C 18.898438 25.003906 18.757813 24.988281 18.625 24.9375 L 15.84375 23.8125 C 15.320313 23.601563 15.070313 23.023438 15.28125 22.5 C 15.386719 22.238281 15.578125 22.070313 15.8125 21.96875 C 15.929688 21.917969 16.054688 21.90625 16.1875 21.90625 Z"></path>
+          </svg>
+          <div class="font-orbitron font-bold text-lg mt-4 text-draw">CISEAUX</div>
+          <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569]">Tranchant et précis</p>
+        </div>
+      </div>
+
+      <!-- Règles avec TES ICONS -->
+      <div class="flex flex-wrap justify-center gap-6 mb-16">
+        <!-- Pierre bat Ciseaux -->
+        <div class="flex items-center gap-4 dark:bg-[rgba(2,183,245,0.05)] bg-[rgba(2,183,245,0.05)] border dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)] rounded-xl px-6 py-4">
+          <svg width="30" height="30" viewBox="0 0 256 256" fill="#02b7f5" xmlns="http://www.w3.org/2000/svg">
+            <path d="M200,80H184V64a31.97943,31.97943,0,0,0-56-21.13208A31.97443,31.97443,0,0,0,72.20508,60.4231,31.978,31.978,0,0,0,24,88v40a104,104,0,0,0,208,0V112A32.03635,32.03635,0,0,0,200,80ZM152,48a16.01833,16.01833,0,0,1,16,16V80H136V64A16.01833,16.01833,0,0,1,152,48ZM88,64a16,16,0,0,1,32,0v40a16,16,0,0,1-32,0V64ZM40,88a16,16,0,0,1,32,0v16a16,16,0,0,1-32,0Zm88,128a88.10627,88.10627,0,0,1-87.9209-84.249A31.94065,31.94065,0,0,0,80,125.13208a31.92587,31.92587,0,0,0,44.58057,3.34595,32.23527,32.23527,0,0,0,11.79443,11.4414A47.906,47.906,0,0,0,120,176a8,8,0,0,0,16,0,32.03635,32.03635,0,0,1,32-32,8,8,0,0,0,0-16H152a16.01833,16.01833,0,0,1-16-16V96h64a16.01833,16.01833,0,0,1,16,16v16A88.09957,88.09957,0,0,1,128,216Z"></path>
+          </svg>
+          <i class="fa-solid fa-arrow-right text-primary"></i>
+          <svg width="30" height="30" viewBox="0 0 32 32" fill="#f59e0b" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 11.40625 6.96875 C 10.578125 6.953125 9.890625 7.125 9.46875 7.25 C 9.457031 7.25 9.449219 7.25 9.4375 7.25 L 6.9375 8.03125 C 4.003906 8.933594 2 11.652344 2 14.71875 L 2 20 C 2 23.855469 5.144531 27 9 27 L 18.90625 27 C 20.125 27.027344 21.304688 26.3125 21.78125 25.125 C 22.082031 24.371094 22.039063 23.578125 21.75 22.875 C 22.363281 22.550781 22.882813 22.027344 23.15625 21.34375 C 23.46875 20.558594 23.417969 19.722656 23.09375 19 L 27 19 C 28.644531 19 30 17.644531 30 16 C 30 14.355469 28.644531 13 27 13 L 25.46875 13 L 25.875 12.875 C 27.449219 12.398438 28.351563 10.699219 27.875 9.125 C 27.398438 7.550781 25.699219 6.648438 24.125 7.125 L 15.6875 9.71875 C 15.613281 9.53125 15.527344 9.328125 15.40625 9.125 C 14.90625 8.289063 13.894531 7.34375 12.28125 7.0625 C 11.980469 7.011719 11.683594 6.972656 11.40625 6.96875 Z M 25.125 9 C 25.515625 9.042969 25.847656 9.3125 25.96875 9.71875 C 26.132813 10.257813 25.820313 10.804688 25.28125 10.96875 L 18.4375 13.03125 L 18.78125 14.15625 L 18.78125 15 L 27 15 C 27.566406 15 28 15.433594 28 16 C 28 16.566406 27.566406 17 27 17 L 20.40625 17 L 17.78125 15.96875 C 17.402344 15.816406 17.011719 15.742188 16.625 15.75 L 16.09375 11.65625 L 24.71875 9.03125 C 24.855469 8.988281 24.996094 8.984375 25.125 9 Z M 11.375 9.03125 C 11.566406 9.03125 11.765625 9.03125 11.9375 9.0625 C 13.011719 9.25 13.425781 9.71875 13.6875 10.15625 C 13.949219 10.59375 13.96875 10.90625 13.96875 10.90625 C 13.96875 10.925781 13.96875 10.949219 13.96875 10.96875 L 14.8125 17.40625 C 14.820313 17.4375 14.832031 17.46875 14.84375 17.5 C 14.96875 18.027344 14.652344 18.53125 14.125 18.65625 C 13.800781 18.734375 13.636719 18.691406 13.46875 18.59375 C 13.300781 18.496094 13.09375 18.289063 12.9375 17.84375 L 11.6875 13 C 11.609375 12.703125 11.398438 12.460938 11.121094 12.339844 C 10.839844 12.21875 10.519531 12.230469 10.25 12.375 L 8.59375 13.28125 C 8.109375 13.546875 7.933594 14.15625 8.203125 14.640625 C 8.46875 15.125 9.078125 15.300781 9.5625 15.03125 L 10.0625 14.75 L 11.03125 18.4375 C 11.039063 18.46875 11.050781 18.5 11.0625 18.53125 C 11.332031 19.304688 11.792969 19.925781 12.4375 20.3125 C 12.964844 20.628906 13.578125 20.75 14.1875 20.6875 C 13.871094 20.980469 13.609375 21.355469 13.4375 21.78125 C 12.980469 22.925781 13.269531 24.183594 14.09375 25 L 9 25 C 6.226563 25 4 22.773438 4 20 L 4 14.71875 C 4 12.519531 5.429688 10.585938 7.53125 9.9375 L 10.03125 9.1875 C 10.234375 9.125 10.804688 9.03125 11.375 9.03125 Z M 16.8125 17.78125 C 16.886719 17.792969 16.957031 17.78125 17.03125 17.8125 L 20.75 19.3125 C 21.273438 19.523438 21.523438 20.070313 21.3125 20.59375 C 21.101563 21.117188 20.523438 21.367188 20 21.15625 L 16.28125 19.6875 C 16.226563 19.667969 16.203125 19.621094 16.15625 19.59375 C 16.550781 19.085938 16.804688 18.445313 16.8125 17.78125 Z M 16.1875 21.90625 C 16.320313 21.90625 16.460938 21.917969 16.59375 21.96875 L 17.9375 22.5 L 19.25 23.03125 L 19.375 23.0625 C 19.898438 23.273438 20.148438 23.851563 19.9375 24.375 C 19.785156 24.757813 19.445313 24.980469 19.0625 25 C 19.050781 25 19.042969 25 19.03125 25 C 18.898438 25.003906 18.757813 24.988281 18.625 24.9375 L 15.84375 23.8125 C 15.320313 23.601563 15.070313 23.023438 15.28125 22.5 C 15.386719 22.238281 15.578125 22.070313 15.8125 21.96875 C 15.929688 21.917969 16.054688 21.90625 16.1875 21.90625 Z"></path>
+          </svg>
+          <i class="fa-regular fa-circle-check text-win"></i>
+        </div>
+        <!-- Ciseaux bat Feuille -->
+        <div class="flex items-center gap-4 dark:bg-[rgba(2,183,245,0.05)] bg-[rgba(2,183,245,0.05)] border dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)] rounded-xl px-6 py-4">
+          <svg width="30" height="30" viewBox="0 0 32 32" fill="#f59e0b" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 11.40625 6.96875 C 10.578125 6.953125 9.890625 7.125 9.46875 7.25 C 9.457031 7.25 9.449219 7.25 9.4375 7.25 L 6.9375 8.03125 C 4.003906 8.933594 2 11.652344 2 14.71875 L 2 20 C 2 23.855469 5.144531 27 9 27 L 18.90625 27 C 20.125 27.027344 21.304688 26.3125 21.78125 25.125 C 22.082031 24.371094 22.039063 23.578125 21.75 22.875 C 22.363281 22.550781 22.882813 22.027344 23.15625 21.34375 C 23.46875 20.558594 23.417969 19.722656 23.09375 19 L 27 19 C 28.644531 19 30 17.644531 30 16 C 30 14.355469 28.644531 13 27 13 L 25.46875 13 L 25.875 12.875 C 27.449219 12.398438 28.351563 10.699219 27.875 9.125 C 27.398438 7.550781 25.699219 6.648438 24.125 7.125 L 15.6875 9.71875 C 15.613281 9.53125 15.527344 9.328125 15.40625 9.125 C 14.90625 8.289063 13.894531 7.34375 12.28125 7.0625 C 11.980469 7.011719 11.683594 6.972656 11.40625 6.96875 Z M 25.125 9 C 25.515625 9.042969 25.847656 9.3125 25.96875 9.71875 C 26.132813 10.257813 25.820313 10.804688 25.28125 10.96875 L 18.4375 13.03125 L 18.78125 14.15625 L 18.78125 15 L 27 15 C 27.566406 15 28 15.433594 28 16 C 28 16.566406 27.566406 17 27 17 L 20.40625 17 L 17.78125 15.96875 C 17.402344 15.816406 17.011719 15.742188 16.625 15.75 L 16.09375 11.65625 L 24.71875 9.03125 C 24.855469 8.988281 24.996094 8.984375 25.125 9 Z M 11.375 9.03125 C 11.566406 9.03125 11.765625 9.03125 11.9375 9.0625 C 13.011719 9.25 13.425781 9.71875 13.6875 10.15625 C 13.949219 10.59375 13.96875 10.90625 13.96875 10.90625 C 13.96875 10.925781 13.96875 10.949219 13.96875 10.96875 L 14.8125 17.40625 C 14.820313 17.4375 14.832031 17.46875 14.84375 17.5 C 14.96875 18.027344 14.652344 18.53125 14.125 18.65625 C 13.800781 18.734375 13.636719 18.691406 13.46875 18.59375 C 13.300781 18.496094 13.09375 18.289063 12.9375 17.84375 L 11.6875 13 C 11.609375 12.703125 11.398438 12.460938 11.121094 12.339844 C 10.839844 12.21875 10.519531 12.230469 10.25 12.375 L 8.59375 13.28125 C 8.109375 13.546875 7.933594 14.15625 8.203125 14.640625 C 8.46875 15.125 9.078125 15.300781 9.5625 15.03125 L 10.0625 14.75 L 11.03125 18.4375 C 11.039063 18.46875 11.050781 18.5 11.0625 18.53125 C 11.332031 19.304688 11.792969 19.925781 12.4375 20.3125 C 12.964844 20.628906 13.578125 20.75 14.1875 20.6875 C 13.871094 20.980469 13.609375 21.355469 13.4375 21.78125 C 12.980469 22.925781 13.269531 24.183594 14.09375 25 L 9 25 C 6.226563 25 4 22.773438 4 20 L 4 14.71875 C 4 12.519531 5.429688 10.585938 7.53125 9.9375 L 10.03125 9.1875 C 10.234375 9.125 10.804688 9.03125 11.375 9.03125 Z M 16.8125 17.78125 C 16.886719 17.792969 16.957031 17.78125 17.03125 17.8125 L 20.75 19.3125 C 21.273438 19.523438 21.523438 20.070313 21.3125 20.59375 C 21.101563 21.117188 20.523438 21.367188 20 21.15625 L 16.28125 19.6875 C 16.226563 19.667969 16.203125 19.621094 16.15625 19.59375 C 16.550781 19.085938 16.804688 18.445313 16.8125 17.78125 Z M 16.1875 21.90625 C 16.320313 21.90625 16.460938 21.917969 16.59375 21.96875 L 17.9375 22.5 L 19.25 23.03125 L 19.375 23.0625 C 19.898438 23.273438 20.148438 23.851563 19.9375 24.375 C 19.785156 24.757813 19.445313 24.980469 19.0625 25 C 19.050781 25 19.042969 25 19.03125 25 C 18.898438 25.003906 18.757813 24.988281 18.625 24.9375 L 15.84375 23.8125 C 15.320313 23.601563 15.070313 23.023438 15.28125 22.5 C 15.386719 22.238281 15.578125 22.070313 15.8125 21.96875 C 15.929688 21.917969 16.054688 21.90625 16.1875 21.90625 Z"></path>
+          </svg>
+          <i class="fa-solid fa-arrow-right text-primary"></i>
+          <svg width="30" height="30" viewBox="0 0 485 485" fill="#22c55e" xmlns="http://www.w3.org/2000/svg">
+            <path d="M382.5,69.429c-7.441,0-14.5,1.646-20.852,4.573c-4.309-23.218-24.7-40.859-49.148-40.859 c-7.68,0-14.958,1.744-21.467,4.852C285.641,16.205,265.932,0,242.5,0c-23.432,0-43.141,16.206-48.533,37.995 c-6.508-3.107-13.787-4.852-21.467-4.852c-27.57,0-50,22.43-50,50v122.222c-6.129-2.686-12.891-4.187-20-4.187 c-27.57,0-50,22.43-50,50V354c0,72.233,58.766,131,131,131h118c72.233,0,131-58.767,131-131V119.429 C432.5,91.858,410.07,69.429,382.5,69.429z M402.5,354c0,55.691-45.309,101-101,101h-118c-55.691,0-101-45.309-101-101V251.178 c0-11.028,8.972-20,20-20s20,8.972,20,20v80h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30V50 c0-11.028,8.972-20,20-20c11.028,0,20,8.972,20,20v191.178h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30v-121.75 c0-11.028,8.972-20,20-20s20,8.972,20,20V354z"></path>
+          </svg>
+          <i class="fa-regular fa-circle-check text-win"></i>
+        </div>
+        <!-- Feuille bat Pierre -->
+        <div class="flex items-center gap-4 dark:bg-[rgba(2,183,245,0.05)] bg-[rgba(2,183,245,0.05)] border dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)] rounded-xl px-6 py-4">
+          <svg width="30" height="30" viewBox="0 0 485 485" fill="#22c55e" xmlns="http://www.w3.org/2000/svg">
+            <path d="M382.5,69.429c-7.441,0-14.5,1.646-20.852,4.573c-4.309-23.218-24.7-40.859-49.148-40.859 c-7.68,0-14.958,1.744-21.467,4.852C285.641,16.205,265.932,0,242.5,0c-23.432,0-43.141,16.206-48.533,37.995 c-6.508-3.107-13.787-4.852-21.467-4.852c-27.57,0-50,22.43-50,50v122.222c-6.129-2.686-12.891-4.187-20-4.187 c-27.57,0-50,22.43-50,50V354c0,72.233,58.766,131,131,131h118c72.233,0,131-58.767,131-131V119.429 C432.5,91.858,410.07,69.429,382.5,69.429z M402.5,354c0,55.691-45.309,101-101,101h-118c-55.691,0-101-45.309-101-101V251.178 c0-11.028,8.972-20,20-20s20,8.972,20,20v80h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30V50 c0-11.028,8.972-20,20-20c11.028,0,20,8.972,20,20v191.178h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30v-121.75 c0-11.028,8.972-20,20-20s20,8.972,20,20V354z"></path>
+          </svg>
+          <i class="fa-solid fa-arrow-right text-primary"></i>
+          <svg width="30" height="30" viewBox="0 0 256 256" fill="#02b7f5" xmlns="http://www.w3.org/2000/svg">
+            <path d="M200,80H184V64a31.97943,31.97943,0,0,0-56-21.13208A31.97443,31.97443,0,0,0,72.20508,60.4231,31.978,31.978,0,0,0,24,88v40a104,104,0,0,0,208,0V112A32.03635,32.03635,0,0,0,200,80ZM152,48a16.01833,16.01833,0,0,1,16,16V80H136V64A16.01833,16.01833,0,0,1,152,48ZM88,64a16,16,0,0,1,32,0v40a16,16,0,0,1-32,0V64ZM40,88a16,16,0,0,1,32,0v16a16,16,0,0,1-32,0Zm88,128a88.10627,88.10627,0,0,1-87.9209-84.249A31.94065,31.94065,0,0,0,80,125.13208a31.92587,31.92587,0,0,0,44.58057,3.34595,32.23527,32.23527,0,0,0,11.79443,11.4414A47.906,47.906,0,0,0,120,176a8,8,0,0,0,16,0,32.03635,32.03635,0,0,1,32-32,8,8,0,0,0,0-16H152a16.01833,16.01833,0,0,1-16-16V96h64a16.01833,16.01833,0,0,1,16,16v16A88.09957,88.09957,0,0,1,128,216Z"></path>
+          </svg>
+          <i class="fa-regular fa-circle-check text-win"></i>
+        </div>
+      </div>
+
+      <!-- Étapes pour commencer -->
+      <h3 class="font-orbitron font-bold text-xl mb-8">Comment commencer ?</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div class="text-center">
+          <div class="inline-block p-4 rounded-xl bg-[rgba(2,183,245,0.1)] text-primary text-2xl mb-3"><i class="fa-solid fa-user-plus"></i></div>
+          <div class="font-orbitron font-bold text-sm">Crée ton compte</div>
+          <p class="font-outfit text-xs dark:text-[#94a3b8] mt-1">Inscription gratuite en 30 secondes</p>
+        </div>
+        <div class="text-center">
+          <div class="inline-block p-4 rounded-xl bg-[rgba(2,183,245,0.1)] text-primary text-2xl mb-3"><i class="fa-solid fa-right-to-bracket"></i></div>
+          <div class="font-orbitron font-bold text-sm">Connecte-toi</div>
+          <p class="font-outfit text-xs dark:text-[#94a3b8] mt-1">Accède à ton profil et tes stats</p>
+        </div>
+        <div class="text-center">
+          <div class="inline-block p-4 rounded-xl bg-[rgba(2,183,245,0.1)] text-primary text-2xl mb-3"><i class="bx bx-joystick"></i></div>
+          <div class="font-orbitron font-bold text-sm">Lance une partie</div>
+          <p class="font-outfit text-xs dark:text-[#94a3b8] mt-1">Trouve un adversaire en quelques secondes</p>
+        </div>
+        <div class="text-center">
+          <div class="inline-block p-4 rounded-xl bg-[rgba(2,183,245,0.1)] text-primary text-2xl mb-3"><i class="fa-solid fa-trophy"></i></div>
+          <div class="font-orbitron font-bold text-sm">Grimpe le classement</div>
+          <p class="font-outfit text-xs dark:text-[#94a3b8] mt-1">Accumule des points et deviens légendaire</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FONCTIONNALITÉS SECTION -->
+  <section class="py-24 px-6 dark:bg-[#080c18] bg-[#e0f2fe]" id="fonctions">
+    <div class="max-w-5xl mx-auto">
+      <div class="flex justify-center items-center gap-2 font-rajdhani font-bold text-2xl uppercase tracking-widest text-primary mb-3">
+        <i class="bx bx-zap"></i> FONCTIONNALITÉS
+      </div>
+      <h2 class="font-orbitron font-bold text-2xl lg:text-3xl dark:text-white text-[#0a0f1e] text-center mb-12">Tout ce dont tu as besoin pour dominer</h2>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Feature 1 -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border dark:border-[rgba(2,183,245,0.12)] border-[rgba(2,183,245,0.2)] hover:border-primary hover:-translate-y-1 transition shadow-lg group">
+          <div class="p-3 rounded-xl bg-[rgba(2,183,245,0.1)] text-primary text-2xl inline-block group-hover:scale-110 transition"><i class="bx bx-broadcast"></i></div>
+          <h3 class="font-orbitron font-bold text-base dark:text-white mt-4 mb-2">Jeu en Temps Réel</h3>
+          <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569]">Affronte des joueurs du monde entier instantanément. Matchmaking rapide, 0 latence.</p>
+        </div>
+        <!-- Feature 2 -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border dark:border-[rgba(2,183,245,0.12)] border-[rgba(2,183,245,0.2)] hover:border-gold hover:-translate-y-1 transition shadow-lg group">
+          <div class="p-3 rounded-xl bg-[rgba(251,191,36,0.1)] text-gold text-2xl inline-block group-hover:scale-110 transition"><i class="bx bx-medal"></i></div>
+          <h3 class="font-orbitron font-bold text-base dark:text-white mt-4 mb-2">Classement Mondial</h3>
+          <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569]">Grimpe dans le top mondial, consulte les stats des meilleurs joueurs et défends ton rang.</p>
+        </div>
+        <!-- Feature 3 -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border dark:border-[rgba(2,183,245,0.12)] border-[rgba(2,183,245,0.2)] hover:border-primary hover:-translate-y-1 transition shadow-lg group">
+  <div class="p-3 rounded-xl bg-[rgba(239,68,68,0.1)] text-lose text-2xl inline-block group-hover:scale-110 transition">
+    <i class="fa-solid fa-robot"></i>
+  </div>
+  <h3 class="font-orbitron font-bold text-base dark:text-white mt-2 mb-3">Choix du niveau</h3>
+    <!-- Petit texte explicatif -->
+      <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569]">
+      Définis ton niveau de jeu.
+      Plus le niveau grimpe, plus le combat devient féroce, 
+      seuls ceux qui gardent le contrôle dominent l’arène.
+      </p> 
+    </div>
+        <!-- Feature 4 -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border dark:border-[rgba(2,183,245,0.12)] border-[rgba(2,183,245,0.2)] hover:border-primary hover:-translate-y-1 transition shadow-lg group">
+          <div class="p-3 rounded-xl bg-[rgba(2,183,245,0.1)] text-primary text-2xl inline-block group-hover:scale-110 transition"><i class="bx bx-bar-chart-alt-2"></i></div>
+          <h3 class="font-orbitron font-bold text-base dark:text-white mt-4 mb-2">Statistiques Détaillées</h3>
+          <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569]">Analyse tes performances : taux de victoire, historique complet et progression en temps réel.</p>
+        </div>
+        <!-- Feature 5 -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border dark:border-[rgba(2,183,245,0.12)] border-[rgba(2,183,245,0.2)] hover:border-draw hover:-translate-y-1 transition shadow-lg group">
+          <div class="p-3 rounded-xl bg-[rgba(245,158,11,0.1)] text-draw text-2xl inline-block group-hover:scale-110 transition"><i class="bx bx-shield-quarter"></i></div>
+          <h3 class="font-orbitron font-bold text-base dark:text-white mt-4 mb-2">Sécurisé</h3>
+          <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569]">Données protégées, anti-triche intégré et environnement de jeu équitable pour tous.</p>
+        </div>
+        <!-- Feature 6 -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border dark:border-[rgba(2,183,245,0.12)] border-[rgba(2,183,245,0.2)] hover:border-lose hover:-translate-y-1 transition shadow-lg group">
+          <div class="p-3 rounded-xl bg-[rgba(239,68,68,0.1)] text-lose text-2xl inline-block group-hover:scale-110 transition"><i class="bx bx-network-chart"></i></div>
+          <h3 class="font-orbitron font-bold text-base dark:text-white mt-4 mb-2">Grande Communauté</h3>
+          <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569]">Rejoins des milliers de joueurs actifs, partage tes victoires et crée des rivalités épiques.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section class="py-24 px-6 dark:bg-gradient-to-br dark:from-[rgba(2,183,245,0.06)] dark:to-[rgba(2,183,245,0.02)] bg-gradient-to-br from-[rgba(2,183,245,0.08)] to-[rgba(2,183,245,0.03)] border-y dark:border-[rgba(2,183,245,0.1)] border-[rgba(2,183,245,0.1)] text-center relative overflow-hidden">
+    <!-- SVG fond décoratif -->
+    <svg class="absolute inset-0 w-full h-full opacity-5" viewBox="0 0 1440 400" preserveAspectRatio="none">
+      <path d="M0 200 L200 100 L400 200 L600 50 L800 200 L1000 120 L1200 200 L1440 100" stroke="rgba(2,183,245,0.2)" fill="none" stroke-width="0.8"/>
+      <circle cx="300" cy="150" r="30" stroke="rgba(2,183,245,0.1)" fill="none"/>
+      <circle cx="1000" cy="250" r="40" stroke="rgba(2,183,245,0.1)" fill="none"/>
+    </svg>
+    <div class="relative z-10 max-w-3xl mx-auto">
+      <!-- <div class="inline-flex items-center gap-2 bg-[rgba(2,183,245,0.1)] border border-primary/30 rounded-full px-4 py-2 mb-6">
+        <i class="bx bx-zap text-primary"></i>
+        <span class="font-rajdhani font-bold text-xs uppercase tracking-widest text-primary">REJOINS L'ARÈNE</span>
+      </div> -->
+      <h2 class="font-orbitron font-black text-3xl lg:text-5xl bg-gradient-to-r from-primary to-[#0066ff] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(2,183,245,0.5)] mb-4">Prêt à devenir le meilleur ?</h2>
+      <p class="font-outfit text-lg dark:text-[#94a3b8] text-[#475569] max-w-2xl mx-auto mb-10">Rejoins des milliers de joueurs et commence ton ascension vers le sommet du classement mondial.</p>
+      <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+        <a href="player/connexion.html" class="flex items-center gap-3 px-10 py-4 rounded-full bg-gradient-to-r from-[#02b7f5] to-[#0066ff] text-white font-orbitron font-bold text-sm shadow-[0_6px_30px_rgba(2,183,245,0.5)] hover:scale-105 hover:shadow-[0_0_40px_rgba(2,183,245,0.8)] transition">
+          <i class="bx bx-joystick text-lg"></i> JOUER GRATUITEMENT <i class="fa-solid fa-arrow-right text-sm ml-1"></i>
+        </a>
+        <!-- <a href="dashboard.html#classement" class="flex items-center gap-2 px-8 py-4 rounded-full border-2 border-primary text-primary font-rajdhani font-semibold text-sm hover:bg-[rgba(2,183,245,0.1)] hover:scale-105 transition">
+          <i class="fa-solid fa-ranking-star"></i> VOIR LE CLASSEMENT
+        </a> -->
+      </div>
+      <!-- Mini stats -->
+      <div class="flex flex-wrap justify-center gap-8 mt-10">
+        <div><span class="font-orbitron font-bold text-xl text-primary">12,847+</span> <span class="font-rajdhani text-xs dark:text-[#94a3b8] block">Joueurs</span></div>
+        <div class="w-px h-8 dark:bg-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.1)]"></div>
+        <div><span class="font-orbitron font-bold text-xl text-primary">489K+</span> <span class="font-rajdhani text-xs dark:text-[#94a3b8] block">Parties</span></div>
+        <div class="w-px h-8 dark:bg-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.1)]"></div>
+        <div><span class="font-orbitron font-bold text-xl text-primary">47</span> <span class="font-rajdhani text-xs dark:text-[#94a3b8] block">Pays</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="py-12 px-6 border-t dark:border-[rgba(2,183,245,0.08)] border-[rgba(2,183,245,0.1)]">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Zone gauche -->
+        <div class="flex justify-center gap-2">
+          <div>
+            <img src="logobg.png" alt="" width="90px" height="100px">
+          </div>
+          <div>
+            <div class="font-orbitron font-bold text-primary text-lg mb-2">SBA</div>
+          <p class="font-outfit text-xs dark:text-[#94a3b8] text-[#475569] max-w-[200px]">Shifumi Battle Arena — Le jeu de Pierre-Feuille-Ciseaux ultime.</p>
+          </div>
+        </div>
+        <!-- Zone centre -->
+        <div>
+          <div class="font-rajdhani font-bold text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569] mb-3">NAVIGATION</div>
+          <ul class="space-y-2">
+            <li><a href="player/connexion.html" class="font-outfit text-xs dark:text-[#94a3b8] text-[#475569] hover:text-primary transition">Jouer</a></li>
+            <li><a href="index.html" class="font-outfit text-xs dark:text-[#94a3b8] text-[#475569] hover:text-primary transition">Accueil</a></li>
+            <li><a href="#fonctions" class="font-outfit text-xs dark:text-[#94a3b8] text-[#475569] hover:text-primary transition">Fonctionnalités</a></li>
+            <li><a href="#regle" class="font-outfit text-xs dark:text-[#94a3b8] text-[#475569] hover:text-primary transition">Règles</a></li>
+          </ul>
+        </div>
+        <!-- Zone droite -->
+        <div>
+          <div class="font-rajdhani font-bold text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569] mb-3">CONTACT</div>
+          <ul class="space-y-2">
+            <li class="flex items-center gap-2 font-outfit text-sm dark:text-[#94a3b8] text-[#475569]"><i class="text-lg bx bx-envelope text-primary"></i> hounmenouangelo@gmail.com</li>
+            
+          </ul>
+        </div>
+      </div>
+      <!-- Ligne basse -->
+      <div class="border-t dark:border-[rgba(2,183,245,0.08)] border-[rgba(2,183,245,0.1)] mt-8 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <span class="font-outfit text-xs dark:text-[#475569] text-[#64748b]">© 2026 SBA · Shifumi Battle Arena</span>
+        <div class="flex items-center gap-2">
+          
+          <span class="font-outfit text-xs dark:text-[#94a3b8] text-[#475569]">Créé par</span>
+          <a href="https://hounmenou-ricardo.vercel.app/" target="_blank" rel="noopener" class="font-outfit text-sm bg-gradient-to-r from-primary to-[#0066ff] bg-clip-text text-transparent font-semibold hover:drop-shadow-[0_0_10px_rgba(2,183,245,0.5)] transition flex items-center gap-1">
+            Ricardo 
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- SCRIPT JS : thème, navbar scroll, menu mobile, anime.js -->
+  <script>
+    (function() {
+      // Thème dark/light avec localStorage
+      const html = document.documentElement;
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      if (savedTheme === 'light') {
+        html.classList.remove('dark');
+        themeIcon.className = 'fa-solid fa-sun text-[#f59e0b]';
+      } else {
+        html.classList.add('dark');
+        themeIcon.className = 'fa-solid fa-moon text-primary';
+      }
+
+      themeToggle.addEventListener('click', () => {
+        if (html.classList.contains('dark')) {
+          html.classList.remove('dark');
+          localStorage.setItem('theme', 'light');
+          themeIcon.className = 'fa-solid fa-sun text-[#f59e0b]';
+        } else {
+          html.classList.add('dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.className = 'fa-solid fa-moon text-primary';
+        }
+      });
+
+      // Navbar scroll opacity
+      const navbar = document.getElementById('navbar');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+          navbar.classList.add('dark:bg-[#0a0f1e]/95', 'bg-white/95');
+        } else {
+          navbar.classList.remove('dark:bg-[#0a0f1e]/95', 'bg-white/95');
+        }
+      });
+
+      // Menu mobile hamburger
+      const hamburgerBtn = document.getElementById('hamburgerBtn');
+      const closeMenuBtn = document.getElementById('closeMenuBtn');
+      const mobileMenu = document.getElementById('mobileMenu');
+
+      function openMobileMenu() {
+        mobileMenu.style.display = 'flex';
+        setTimeout(() => mobileMenu.classList.add('mobile-menu-open'), 10);
+      }
+      function closeMobileMenu() {
+        mobileMenu.classList.remove('mobile-menu-open');
+        setTimeout(() => mobileMenu.style.display = 'none', 300);
+      }
+
+      hamburgerBtn?.addEventListener('click', openMobileMenu);
+      closeMenuBtn?.addEventListener('click', closeMobileMenu);
+
+      // Anime.js pour le titre hero
+      document.addEventListener('DOMContentLoaded', () => {
+        anime({
+          targets: '.hero-letter',
+          translateY: [80, 0],
+          opacity: [0, 1],
+          scale: [0.2, 1],
+          filter: ['blur(20px)', 'blur(0px)'],
+          delay: anime.stagger(100),
+          duration: 900,
+          easing: 'easeOutElastic(1, .5)'
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

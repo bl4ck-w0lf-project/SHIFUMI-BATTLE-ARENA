@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compte confirmé — Shifumi Battle Arena</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Outfit:wght@100..900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+    .orb    { font-family: 'Orbitron', sans-serif; }
+    .raj    { font-family: 'Rajdhani', sans-serif; }
+    .outfit { font-family: 'Outfit', sans-serif; }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #02b7f5 0%, #0284c7 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 56px 48px;
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+
+    .icon-wrapper {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+      animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .icon-wrapper.success { background: #d1fae5; }
+    .icon-wrapper.success i { font-size: 36px; color: #10b981; }
+    .icon-wrapper.error   { background: #fee2e2; }
+    .icon-wrapper.error i { font-size: 36px; color: #ef4444; }
+
+    @keyframes popIn {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #02b7f5;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 24px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: #e5e7eb;
+      border-radius: 99px;
+      overflow: hidden;
+      margin: 28px 0 16px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #02b7f5;
+      border-radius: 99px;
+      width: 0%;
+      transition: width 3s linear;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 14px 36px;
+      background: #02b7f5;
+      color: white;
+      border-radius: 20px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      margin-top: 20px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: #0284c7;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(2,183,245,0.3);
+    }
+
+    #countdown {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+
+    <!-- État chargement -->
+    <div id="state-loading">
+      <div class="spinner"></div>
+      <h2 class="raj" style="font-size:22px;color:#1f2937;margin-bottom:8px;">Confirmation en cours...</h2>
+      <p class="outfit" style="color:#6b7280;">Patiente quelques secondes.</p>
+    </div>
+
+    <!-- État succès -->
+    <div id="state-success" style="display:none;">
+      <div class="icon-wrapper success">
+        <i class="fa-solid fa-check"></i>
+      </div>
+      <h1 class="raj" style="font-size:28px;font-weight:700;color:#1f2937;margin-bottom:12px;">Compte confirmé !</h1>
+      <p class="outfit" style="color:#6b7280;font-size:16px;line-height:1.6;margin-bottom:4px;">
+        Ton compte est maintenant actif.<br>
+        Prêt à entrer dans l'arène ?
+      </p>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <p id="countdown" class="outfit">Redirection dans <strong>3s</strong>...</p>
+      <button onclick="goToHome()" class="btn orb">Se connecter maintenant</button>
+    </div>
+
+    <!-- État erreur -->
+    <div id="state-error" style="display:none;">
+      <div class="icon-wrapper error">
+        <i class="fa-solid fa-xmark"></i>
+      </div>
+      <h2 class="raj" style="font-size:24px;font-weight:700;color:#1f2937;margin-bottom:12px;">Lien invalide</h2>
+      <p class="outfit" style="color:#6b7280;font-size:15px;line-height:1.6;margin-bottom:28px;">
+        Ce lien a expiré ou a déjà été utilisé.<br>
+        Inscris-toi à nouveau pour recevoir un nouveau lien.
+      </p>
+      <button onclick="goToHome()" class="btn orb">Retour à l'accueil</button>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL      = 'https://rblzhlykvssztahurebt.supabase.co'
+    const SUPABASE_ANON_KEY = 'sb_publishable_b4cQt1irGiIGPnqxqJf_RQ_Jv_WO0wX'
+    const { createClient } = supabase
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+    // URL de base dynamique — marche en local ET en prod sans rien changer
+    const BASE_URL = window.location.origin
+
+    // Redirige toujours vers la bonne URL selon l'environnement
+    function goToHome() {
+      window.location.href = BASE_URL + '/connexion.html'         
+    }
+
+    async function handleConfirmation() {
+      try {
+        // Cas 1 : token_hash dans l'URL (nouveau format Supabase PKCE)
+        const searchParams = new URLSearchParams(window.location.search)
+        const tokenHash    = searchParams.get('token_hash')
+        const type         = searchParams.get('type')
+
+        if (tokenHash && type) {
+          const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type })
+          if (error) { showState('error'); return }
+          showState('success')
+          startCountdown()
+          return
+        }
+
+        // Cas 2 : access_token dans le hash # (ancien format Supabase)
+        const hashParams  = new URLSearchParams(window.location.hash.replace('#', ''))
+        const accessToken = hashParams.get('access_token')
+
+        if (accessToken) {
+          const { data: { session }, error } = await sb.auth.getSession()
+          if (error || !session) { showState('error'); return }
+          showState('success')
+          startCountdown()
+          return
+        }
+
+        // Cas 3 : URL sans token
+        // Supabase a déjà confirmé le compte côté serveur avant de rediriger
+        showState('success')
+        startCountdown()
+
+      } catch (err) {
+        console.error(err)
+        showState('error')
+      }
+    }
+
+    function showState(state) {
+      document.getElementById('state-loading').style.display = 'none'
+      document.getElementById('state-success').style.display = 'none'
+      document.getElementById('state-error').style.display   = 'none'
+      document.getElementById(`state-${state}`).style.display = 'block'
+    }
+
+    function startCountdown() {
+      // Lance la barre de progression sur 3 secondes
+      setTimeout(() => {
+        document.getElementById('progress-fill').style.width = '100%'
+      }, 100)
+
+      let seconds = 3
+      const countdownEl = document.getElementById('countdown')
+
+      const interval = setInterval(() => {
+        seconds--
+        if (seconds <= 0) {
+          clearInterval(interval)
+          goToHome()
+        } else {
+          countdownEl.innerHTML = `Redirection dans <strong>${seconds}s</strong>...`
+        }
+      }, 1000)
+    }
+
+    handleConfirmation()
+  </script>
+
+</body>
+</html>

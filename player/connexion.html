@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenue sur Shifumi Battle Arena – Connecte-toi pour jouer !! </title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../player/assets/css/style.css">
+
+
+
+  <!-- Favicon classique (format ICO) - La plus compatible -->
+  <link rel="shortcut icon" href="logobg.png" type="image/x-icon">
+
+  <!-- Favicons pour les navigateurs modernes (format PNG) -->
+  <link rel="icon" type="image/png" sizes="16x16" href="logobg.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="logobg.png">
+
+  <!-- Icône pour les appareils Apple (iPhone, iPad) -->
+  <link rel="apple-touch-icon" sizes="180x180" href="logobg.png">
+
+  <!-- Manifeste pour les applications web progressives (PWA) -->
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!-- Couleur de thème pour la barre d'adresse du navigateur mobile -->
+  <meta name="theme-color" content="#02b7f5">
+</head>
+<body>
+
+    <section>
+
+        <!-- ===== PARTIE GAUCHE — image + titre ===== -->
+        <div class="bg-image">
+            <div class="title">
+                <p class="title-para orb">SBA</p>
+                <h1 class="uppercase orb">Shifumi Battle Arena</h1>
+                <p class="title-text outfit">Jouez vite, pensez vite, et montrez qui règne sur ce duel de réflexes !</p>
+            </div>
+        </div>
+
+        <!-- ===== PARTIE DROITE — formulaires ===== -->
+        <div class="forms">
+
+            <!-- Boutons switch -->
+            <div class="center">
+                <button class="btn orb active" id="btn-connexion">Connexion</button>
+                <button class="btn orb" id="btn-inscription">Inscription</button>
+            </div>
+
+            <!-- Formulaire de connexion -->
+            <div class="connexion active" id="form-connexion">
+                <form class="connexion-form" onsubmit="handleConnexion(event)">
+                    <div class="connexion-title">
+                        <h1 class="raj">Content de te revoir, challenger !</h1>
+                        <p class="outfit">Les duels continuent, les esprits se défient !</p>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="outfit">Email</label>
+                        <input type="email" id="login-email" placeholder="marcel@gmail.com">
+                    </div>
+
+                    <div class="field-group">
+                        <label class="outfit">Mot de passe</label>
+                        <input type="password" id="login-password" placeholder="●●●●●●●●">
+                    </div>
+
+                    <button type="submit" class="submit orb">Se connecter</button>
+                </form>
+            </div>
+
+            <!-- Formulaire d'inscription -->
+            <div class="inscription" id="form-inscription">
+                <form class="inscription-form" onsubmit="handleInscription(event)">
+                    <div class="inscription-title">
+                        <h1 class="raj">Bienvenue, challenger !</h1>
+                        <p class="outfit">L'arène vous attend… vos réflexes seront poussés à la limite !</p>
+                    </div>
+
+                    <div class="row-two">
+                        <div class="field-group">
+                            <label class="outfit">Nom</label>
+                            <input type="text" id="signup-nom" placeholder="Dupont">
+                        </div>
+                        <div class="field-group">
+                            <label class="outfit">Prénom</label>
+                            <input type="text" id="signup-prenom" placeholder="Marie">
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="outfit">Pseudo</label>
+                        <input type="text" id="signup-pseudo" placeholder="Votre pseudo">
+                    </div>
+
+                    <div class="field-group">
+                        <label class="outfit">Email</label>
+                        <input type="email" id="signup-email" placeholder="marcel@gmail.com">
+                    </div>
+
+                    <div class="field-group">
+                        <label class="outfit">Mot de passe</label>
+                        <input type="password" id="signup-password" placeholder="Minimum 6 caractères">
+                    </div>
+
+                    <div class="field-group">
+                        <label class="outfit">Confirmez le mot de passe</label>
+                        <input type="password" id="signup-confirm-password" placeholder="Confirmez votre mot de passe">
+                    </div>
+
+                    <button type="submit" class="submit orb">S'inscrire</button>
+                </form>
+            </div>
+
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../player/assets/js/auth.js"></script>
+</body>
+</html>

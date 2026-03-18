@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHIFUMI BATTLE ARENA · Dashboard · Statistiques & Classement</title>
+
+
+
+
+
+  <!-- Favicon classique (format ICO) - La plus compatible -->
+  <link rel="shortcut icon" href="logobg.png" type="image/x-icon">
+
+  <!-- Favicons pour les navigateurs modernes (format PNG) -->
+  <link rel="icon" type="image/png" sizes="16x16" href="logobg.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="logobg.png">
+
+  <!-- Icône pour les appareils Apple (iPhone, iPad) -->
+  <link rel="apple-touch-icon" sizes="180x180" href="logobg.png">
+
+  <!-- Manifeste pour les applications web progressives (PWA) -->
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!-- Couleur de thème pour la barre d'adresse du navigateur mobile -->
+  <meta name="theme-color" content="#02b7f5">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#02b7f5',
+            'primary-dark': '#0066ff',
+            win: '#22c55e',
+            lose: '#ef4444',
+            draw: '#f59e0b',
+            gold: '#fbbf24',
+            silver: '#94a3b8',
+            bronze: '#b45309',
+          },
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            rajdhani: ['Rajdhani', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --color-primary: #02b7f5;
+      --color-win: #22c55e;
+      --color-lose: #ef4444;
+      --color-draw: #f59e0b;
+      --color-gold: #fbbf24;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-scroll::-webkit-scrollbar-thumb { background: #02b7f5; border-radius: 20px; }
+
+    .avatar-ping::after {
+      content: '';
+      position: absolute;
+      top: -4px; left: -4px; right: -4px; bottom: -4px;
+      border-radius: 50%;
+      border: 2px solid #02b7f5;
+      animation: ping-ring 1.5s cubic-bezier(0,0,0.2,1) infinite;
+    }
+    @keyframes ping-ring {
+      75%, 100% { transform: scale(1.5); opacity: 0; }
+    }
+
+    .stat-card { transition: border-color 0.2s, box-shadow 0.3s, transform 0.2s; }
+    .stat-card:hover { border-color: #02b7f5 !important; box-shadow: 0 0 20px rgba(2,183,245,0.15); transform: translateY(-2px); }
+    .stat-card-win:hover  { border-color: #22c55e !important; box-shadow: 0 0 20px rgba(34,197,94,0.15); transform: translateY(-2px); }
+    .stat-card-lose:hover { border-color: #ef4444 !important; box-shadow: 0 0 20px rgba(239,68,68,0.15); transform: translateY(-2px); }
+    .stat-card-equal:hover { border-color: #f59e0b !important; box-shadow: 0 0 20px rgba(245,158,11,0.15); transform: translateY(-2px); }
+
+    .progress-fill { transition: width 1s ease; }
+
+    .gradient-gold {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .sidebar-open .sidebar { transform: translateX(0); }
+    .sidebar-open .sidebar-overlay { display: block; }
+
+    /* Modal overlay */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-box { animation: modalIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275); }
+  </style>
+</head>
+
+<body class="dark:bg-[#0a0f1e] bg-[#f0f9ff] dark:text-white text-[#0a0f1e] font-outfit antialiased transition-colors duration-300">
+
+  <!-- OVERLAY SIDEBAR MOBILE -->
+  <div class="sidebar-overlay fixed inset-0 bg-black/50 z-40 hidden lg:hidden" id="sidebarOverlay"></div>
+
+  <!-- ============================================================
+       MODAL DÉCONNEXION
+  ============================================================ -->
+  <div id="modal-logout" class="modal-overlay hidden">
+    <div class="modal-box dark:bg-[#0d1b2a] bg-white rounded-2xl p-8 max-w-sm w-full mx-4
+                border dark:border-[rgba(2,183,245,0.2)] border-[rgba(2,183,245,0.3)] shadow-2xl text-center">
+      <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-right-from-bracket text-red-500 text-2xl"></i>
+      </div>
+      <h2 class="font-orbitron font-bold text-xl dark:text-white text-[#0a0f1e] mb-2">
+        Quitter l'arène ?
+      </h2>
+      <p class="font-rajdhani text-base dark:text-[#94a3b8] text-[#475569] mb-6">
+        Ta session en cours sera terminée. Tu devras te reconnecter pour rejouer.
+      </p>
+      <div class="flex gap-3 justify-center">
+        <button id="btn-logout-cancel"
+          class="flex-1 px-5 py-3 rounded-full border dark:border-[#94a3b8] border-[#475569]
+                 dark:text-[#94a3b8] text-[#475569] font-rajdhani font-semibold
+                 hover:border-primary hover:text-primary transition">
+          <i class="fa-solid fa-shield-halved mr-1"></i> RESTER
+        </button>
+        <button id="btn-logout-confirm"
+          class="flex-1 px-5 py-3 rounded-full bg-gradient-to-r from-red-500 to-red-700
+                 text-white font-orbitron font-semibold shadow-lg
+                 hover:brightness-110 hover:scale-105 transition">
+          <i class="fa-solid fa-right-from-bracket mr-1"></i> QUITTER
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SIDEBAR
+  ============================================================ -->
+  <aside class="sidebar fixed top-0 left-0 w-[260px] h-screen z-50
+                dark:bg-[#080c18] bg-[#e0f2fe]
+                border-r dark:border-[rgba(2,183,245,0.12)] border-[rgba(2,183,245,0.25)]
+                flex flex-col overflow-y-auto sidebar-scroll
+                transition-transform duration-300 -translate-x-full lg:translate-x-0">
+
+    <!-- HEADER SIDEBAR -->
+    <div class="px-6 pt-8 pb-6 border-b dark:border-[rgba(2,183,245,0.12)] border-[rgba(2,183,245,0.2)]">
+      <img src="logobg.png" alt="" width="150px" height="100px">
+      <h1 class="font-orbitron font-black text-2xl tracking-wider text-primary drop-shadow-[0_0_15px_rgba(2,183,245,0.5)]">
+        SHIFUMI BATTLE ARENA
+      </h1>
+      <p class="font-outfit text-xs dark:text-[#94a3b8] text-[#475569] mt-1">
+        Tableau de bord du joueur
+      </p>
+    </div>
+
+    <!-- NAVIGATION -->
+    <div class="px-4 mt-6 flex-1">
+      <div class="font-rajdhani text-xs uppercase tracking-widest dark:text-[rgba(148,163,184,0.5)] text-[#94a3b8] px-3 mb-2">
+        NAVIGATION
+      </div>
+      <nav class="flex flex-col gap-1">
+        <a href="#" class="flex items-center gap-3 py-3 px-4 rounded-xl font-rajdhani font-semibold text-sm transition-all
+                          dark:bg-[rgba(2,183,245,0.15)] bg-[rgba(2,183,245,0.12)]
+                          dark:text-[#02b7f5] text-[#0288d1]">
+          <i class="fa-solid fa-gauge-high w-5"></i>
+          <span>Mon Dashboard</span>
+        </a>
+
+        <a href="#classement" class="flex items-center gap-3 py-3 px-4 rounded-xl font-rajdhani font-semibold text-sm transition-all
+                          dark:text-[#94a3b8] text-[#475569]
+                          dark:hover:bg-[rgba(2,183,245,0.07)] hover:bg-[rgba(2,183,245,0.1)]
+                          dark:hover:text-[#02b7f5] hover:text-[#0288d1]">
+          <i class="fa-solid fa-ranking-star w-5"></i>
+          <span>Classement Mondial</span>
+        </a>
+
+
+        <a href="player_account.html" class="flex items-center gap-3 py-3 px-4 rounded-xl font-rajdhani font-semibold text-sm transition-all
+                          dark:text-[#94a3b8] text-[#475569]
+                          dark:hover:bg-[rgba(2,183,245,0.07)] hover:bg-[rgba(2,183,245,0.1)]
+                          dark:hover:text-[#02b7f5] hover:text-[#0288d1]">
+          <i class="fa-solid fa-user-pen w-5"></i>
+          <span>Mon Compte</span>
+        </a>
+
+
+        <a href="game.html" class="flex items-center gap-3 py-3 px-4 rounded-xl font-rajdhani font-semibold text-sm transition-all
+                          dark:text-[#94a3b8] text-[#475569]
+                          dark:hover:bg-[rgba(2,183,245,0.07)] hover:bg-[rgba(2,183,245,0.1)]
+                          dark:hover:text-[#02b7f5] hover:text-[#0288d1] justify-between">
+          <span class="flex items-center gap-3">
+            <i class="fa-solid fa-gamepad w-5"></i>
+            <span>Jouer</span>
+          </span>
+        </a>
+
+        
+      </nav>
+    </div>
+
+    <!-- BAS SIDEBAR -->
+    <div class="px-4 pb-6 mt-auto">
+      <div class="border-t dark:border-[rgba(2,183,245,0.1)] border-[rgba(2,183,245,0.2)] mb-4"></div>
+
+      <!-- Toggle thème -->
+      <div class="flex items-center justify-between mb-4">
+        <span class="font-rajdhani text-xs dark:text-[#94a3b8] text-[#64748b]">Apparence</span>
+        <button id="themeToggleSidebar"
+          class="relative w-14 h-7 rounded-full transition-colors duration-300 flex items-center
+                 dark:bg-[#02b7f5] bg-[#f59e0b]">
+          <div class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300
+                      dark:translate-x-7 translate-x-0 flex items-center justify-center">
+            <i class="fa-solid fa-moon dark:block hidden text-[#02b7f5] text-xs"></i>
+            <i class="fa-solid fa-sun dark:hidden block text-[#f59e0b] text-xs"></i>
+          </div>
+        </button>
+      </div>
+
+      <!-- Déconnexion sidebar -->
+      <button id="btn-logout-sidebar"
+        class="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border
+               dark:border-red-500/30 border-red-500/30
+               dark:text-[#ef4444] text-[#dc2626]
+               font-rajdhani font-semibold text-sm
+               dark:hover:bg-[rgba(239,68,68,0.1)] hover:bg-[rgba(239,68,68,0.1)] transition">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        <span>Déconnexion</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       MAIN CONTENT
+  ============================================================ -->
+  <div class="lg:ml-[260px] transition-all duration-300 min-h-screen flex flex-col">
+
+    <!-- NAVBAR -->
+    <header class="fixed top-0 left-0 lg:left-[260px] right-0 h-16 z-40
+                   dark:bg-[#0a0f1e]/95 bg-white/95 backdrop-blur-md
+                   border-b dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.2)]
+                   px-6 flex items-center justify-between transition-all">
+
+      <!-- GAUCHE : hamburger + fil d'ariane -->
+      <div class="flex items-center gap-3">
+        <button id="menuToggle" class="lg:hidden text-2xl dark:text-white text-[#0a0f1e]">
+          <i class="fa-solid fa-bars text-primary"></i>
+        </button>
+        <!-- <div class="flex items-center gap-2">
+          <i class="fa-solid fa-gauge-high text-primary"></i>
+          <span class="font-rajdhani font-semibold text-sm dark:text-white text-[#0a0f1e]">Dashboard</span>
+        </div> -->
+      </div>
+
+      <!-- DROITE : avatar + nom prénom + pseudo + rang + toggle -->
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <div id="nav-avatar"
+              class="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-[#02b7f5] to-[#0066ff]
+                     flex items-center justify-center text-white font-orbitron text-xs font-bold
+                     border-2 border-primary">
+              ??
+            </div>
+            <div class="avatar-ping absolute inset-0"></div>
+          </div>
+          <div class="hidden sm:block leading-tight">
+            <div id="nav-name" class="font-outfit font-semibold text-sm dark:text-white text-[#0a0f1e]">
+              Chargement...
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="nav-username" class="font-rajdhani text-xs dark:text-[#02b7f5] text-[#0288d1]"></span>
+              <span class="dark:text-[#94a3b8] text-[#94a3b8] text-xs">·</span>
+              <span id="nav-rank" class="font-rajdhani text-xs text-gold flex items-center gap-1">
+                <i class="fa-solid fa-medal"></i> —
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="h-8 w-px dark:bg-[rgba(2,183,245,0.2)] bg-[rgba(2,183,245,0.3)] hidden lg:block"></div>
+
+        <!-- Déconnexion navbar -->
+        <button id="btn-logout"
+          class="hidden lg:flex items-center gap-2 px-3 py-2 rounded-full border
+                 dark:border-red-500 border-red-600 dark:text-red-500 text-red-600
+                 dark:hover:bg-red-600 hover:bg-red-600 dark:hover:text-white hover:text-white
+                 font-rajdhani text-sm font-semibold transition">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span class="hidden sm:inline">Se déconnecter</span>
+        </button>
+
+        <button id="themeToggleNav"
+          class="w-9 h-9 rounded-full border dark:border-[rgba(2,183,245,0.3)] border-[rgba(2,183,245,0.3)]
+                 flex items-center justify-center hover:bg-[rgba(2,183,245,0.1)] transition">
+          <i id="navThemeIcon" class="fa-solid fa-moon text-primary"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- ============================================================
+         CONTENU PRINCIPAL
+    ============================================================ -->
+    <main class="flex-1 pt-16 p-6 lg:p-8 dark:bg-[#0a0f1e] bg-[#f0f9ff]">
+
+      <!-- EN-TÊTE PAGE -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-10 mb-8">
+        <div>
+          <h1 id="welcome-name"
+            class="font-orbitron font-bold text-2xl lg:text-3xl dark:text-white text-[#0a0f1e]">
+            Bienvenue
+          </h1>
+          <p class="font-outfit text-md dark:text-[#94a3b8] text-[#475569]">
+            Voici tes statistiques de combat
+          </p>
+        </div>
+      </div>
+
+      <!-- ========== MES STATISTIQUES ========== -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 font-rajdhani font-bold text-sm uppercase tracking-widest text-primary mb-4">
+          <i class="fa-solid fa-dice"></i> MES STATISTIQUES
+        </div>
+
+        <!-- Rangée 1 : Parties jouées + Score -->
+        <div class="grid md:grid-cols-2 gap-4 mb-4">
+
+          <!-- Parties jouées -->
+          <div class="stat-card dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border
+                      dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.25)] relative overflow-hidden">
+            <div class="flex justify-between items-start">
+              <span class="font-rajdhani text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569]">PARTIES JOUÉES</span>
+              <div class="p-3 rounded-xl bg-[rgba(2,183,245,0.1)] text-primary">
+                <i class="fa-solid fa-dice"></i>
+              </div>
+            </div>
+            <div id="stat-total-games" class="font-orbitron font-black text-4xl dark:text-white text-[#0a0f1e] mt-4">—</div>
+            <div class="flex items-center gap-2 mt-2">
+              <i class="fa-solid fa-arrow-trend-up text-win"></i>
+              <span class="font-outfit text-xs text-win">Données en direct</span>
+            </div>
+            <svg class="absolute bottom-0 right-0 w-24 h-24 opacity-5" viewBox="0 0 100 100">
+              <path d="M20,80 Q50,20 80,80" stroke="var(--color-primary)" fill="none" stroke-width="3"/>
+            </svg>
+          </div>
+
+          <!-- Score XP -->
+          <div class="stat-card dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border
+                      dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.25)] relative">
+            <div class="flex justify-between items-start">
+              <span class="font-rajdhani text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569]">MON SCORE XP</span>
+              <div class="p-3 rounded-xl bg-[rgba(251,191,36,0.1)] text-gold">
+                <i class="fa-solid fa-star"></i>
+              </div>
+            </div>
+            <div id="stat-score" class="font-orbitron font-black text-4xl gradient-gold mt-4">—</div>
+            <div class="flex items-center gap-2 mt-2">
+              <i class="fa-solid fa-medal text-gold"></i>
+              <span id="nav-rank-sub" class="font-outfit text-xs text-gold">Rang —</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rangée 2 : Victoires / Défaites / Égalités -->
+        <div class="grid md:grid-cols-3 gap-4 mb-6">
+
+          <!-- Victoires -->
+          <div class="stat-card-win dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border
+                      dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.25)] transition">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="p-2 rounded-lg bg-[rgba(34,197,94,0.1)] text-win">
+                <i class="fa-solid fa-trophy"></i>
+              </div>
+              <span class="font-rajdhani text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569]">VICTOIRES</span>
+            </div>
+            <div id="stat-wins" class="font-orbitron font-black text-4xl text-win">—</div>
+            <div class="w-full h-1 bg-[rgba(34,197,94,0.1)] rounded-full mt-3">
+              <div id="progress-wins" class="h-full bg-win rounded-full progress-fill" style="width:0%"></div>
+            </div>
+            <div id="rate-wins" class="font-outfit text-xs dark:text-[#94a3b8] text-[#475569] mt-2">—</div>
+          </div>
+
+          <!-- Défaites -->
+          <div class="stat-card-lose dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border
+                      dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.25)] transition">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="p-2 rounded-lg bg-[rgba(239,68,68,0.1)] text-lose">
+                <i class="fa-solid fa-skull"></i>
+              </div>
+              <span class="font-rajdhani text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569]">DÉFAITES</span>
+            </div>
+            <div id="stat-losses" class="font-orbitron font-black text-4xl text-lose">—</div>
+            <div class="w-full h-1 bg-[rgba(239,68,68,0.1)] rounded-full mt-3">
+              <div id="progress-losses" class="h-full bg-lose rounded-full progress-fill" style="width:0%"></div>
+            </div>
+            <div id="rate-losses" class="font-outfit text-xs dark:text-[#94a3b8] text-[#475569] mt-2">—</div>
+          </div>
+
+          <!-- Égalités -->
+          <div class="stat-card-equal dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border
+                      dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.25)] transition">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="p-2 rounded-lg bg-[rgba(245,158,11,0.1)] text-draw">
+                <i class="fa-solid fa-handshake"></i>
+              </div>
+              <span class="font-rajdhani text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569]">ÉGALITÉS</span>
+            </div>
+            <div id="stat-draws" class="font-orbitron font-black text-4xl text-draw">—</div>
+            <div class="w-full h-1 bg-[rgba(245,158,11,0.1)] rounded-full mt-3">
+              <div id="progress-draws" class="h-full bg-draw rounded-full progress-fill" style="width:0%"></div>
+            </div>
+            <div id="rate-draws" class="font-outfit text-xs dark:text-[#94a3b8] text-[#475569] mt-2">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== MON RANG + TOP 5 ========== -->
+      <div class="grid lg:grid-cols-2 gap-4 mb-6">
+
+        <!-- Mon rang -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border
+                    dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.25)]">
+          <div class="flex items-center gap-2 font-rajdhani font-bold text-sm uppercase tracking-widest text-primary mb-4">
+            <i class="fa-solid fa-medal"></i> MON CLASSEMENT
+          </div>
+
+          <!-- <svg width="120" height="80" viewBox="0 0 120 80" fill="none" class="mx-auto my-4">
+            <rect x="10" y="40" width="25" height="30" stroke="#02b7f5" stroke-width="2" fill="none"/>
+            <rect x="45" y="20" width="25" height="50" stroke="#02b7f5" stroke-width="2" fill="none"/>
+            <rect x="80" y="30" width="25" height="40" stroke="#02b7f5" stroke-width="2" fill="none"/>
+            <circle cx="22" cy="68" r="3" stroke="#02b7f5" fill="none"/>
+            <circle cx="57" cy="68" r="3" stroke="#02b7f5" fill="none"/>
+            <circle cx="92" cy="68" r="3" stroke="#02b7f5" fill="none"/>
+          </svg> -->
+
+          <div class="text-center">
+            <div id="my-rank" class="font-orbitron font-black text-5xl gradient-gold">—</div>
+            <div class="font-rajdhani text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569] mt-1">RANG MONDIAL</div>
+            <div class="flex items-center justify-center gap-2 mt-3">
+              <i class="fa-solid fa-star text-gold"></i>
+              <span id="my-rank-score" class="font-orbitron font-bold text-xl text-gold">— pts</span>
+            </div>
+          </div>
+
+          <div class="border-t dark:border-[rgba(255,255,255,0.06)] border-[rgba(0,0,0,0.06)] my-4"></div>
+
+          <div class="flex justify-center gap-6">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-trophy text-win"></i>
+              <span id="my-rank-wins" class="font-rajdhani font-semibold text-win">—V</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-skull text-lose"></i>
+              <span id="my-rank-losses" class="font-rajdhani font-semibold text-lose">—D</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-handshake text-draw"></i>
+              <span id="my-rank-draws" class="font-rajdhani font-semibold text-draw">—E</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top 5 autres joueurs -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl p-6 border
+                    dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.25)]">
+          <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-2 font-rajdhani font-bold text-sm uppercase tracking-widest text-primary">
+              <i class="fa-solid fa-users"></i> AUTRES JOUEURS
+            </div>
+            <span class="font-rajdhani text-xs px-3 py-1 rounded-full border border-primary text-primary bg-[rgba(2,183,245,0.05)]">
+              TOP 5
+            </span>
+          </div>
+
+          <!-- Rempli dynamiquement par dashboard.js -->
+          <div id="top5-container" class="flex flex-col gap-3">
+            <div class="flex items-center justify-center py-8 dark:text-[#94a3b8] text-[#475569]">
+              <i class="fa-solid fa-spinner animate-spin mr-2"></i> Chargement...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== CLASSEMENT MONDIAL ========== -->
+      <div id="classement" class="mb-8 scroll-mt-20">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+          <div>
+            <div class="flex items-center gap-2 font-orbitron font-bold text-xl text-primary">
+              <i class="fa-solid fa-ranking-star"></i> CLASSEMENT MONDIAL
+            </div>
+            <p class="font-outfit text-sm dark:text-[#94a3b8] text-[#475569]">
+              Tous les joueurs classés par score
+            </p>
+          </div>
+          <div class="flex items-center gap-2 font-rajdhani text-xs px-3 py-1.5 rounded-full border border-win text-win bg-[rgba(34,197,94,0.05)]">
+            <i class="fa-solid fa-circle text-win text-[8px] animate-pulse"></i>
+            <span>EN DIRECT</span>
+          </div>
+        </div>
+
+        <!-- Tableau -->
+        <div class="dark:bg-[#0d1b2a] bg-white rounded-2xl border
+                    dark:border-[rgba(2,183,245,0.15)] border-[rgba(2,183,245,0.25)] overflow-x-auto">
+
+          <!-- En-têtes -->
+          <div class="grid grid-cols-[80px_1fr_100px_80px_80px_80px_120px] gap-2 px-6 py-3
+                      dark:bg-[rgba(2,183,245,0.07)] bg-[rgba(2,183,245,0.04)]
+                      border-b dark:border-[rgba(2,183,245,0.1)] border-[rgba(2,183,245,0.2)]
+                      font-rajdhani text-xs uppercase tracking-widest dark:text-[#94a3b8] text-[#475569]">
+            <div>RANG</div>
+            <div>JOUEUR</div>
+            <div class="text-center">PARTIES</div>
+            <div class="text-center">V</div>
+            <div class="text-center">D</div>
+            <div class="text-center">E</div>
+            <div class="text-right">SCORE</div>
+          </div>
+
+          <!-- Corps — rempli dynamiquement par dashboard.js -->
+          <div id="leaderboard-body"
+               class="divide-y dark:divide-[rgba(255,255,255,0.04)] divide-[rgba(0,0,0,0.04)]">
+            <div class="flex items-center justify-center py-12 dark:text-[#94a3b8] text-[#475569]">
+              <i class="fa-solid fa-spinner animate-spin mr-2"></i> Chargement du classement...
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Supabase + JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../player/assets/js/dashboard.js"></script>
+</body>
+</html>
