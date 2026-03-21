@@ -26,6 +26,11 @@
     }
     currentUser = session.user
 
+
+      // ★ FIX PAGE BLANCHE
+    document.body.style.visibility = 'visible'
+    document.body.style.opacity    = '1'
+
     const { data: profile } = await sb
       .from('profiles')
       .select('*')

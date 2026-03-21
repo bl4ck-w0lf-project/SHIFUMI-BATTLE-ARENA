@@ -156,7 +156,7 @@
   </style>
 </head>
 
-<body class="dark:bg-[#0a0f1e] bg-[#f0f9ff] dark:text-white text-[#0a0f1e] font-outfit antialiased">
+<body class="dark:bg-[#0a0f1e] bg-[#f0f9ff] dark:text-white text-[#0a0f1e] font-outfit antialiased" style="visibility:hidden; opacity:0; transition:opacity 0.25s ease" >
 
   <!-- OVERLAY SIDEBAR MOBILE -->
   <div class="sidebar-overlay fixed inset-0 bg-black/50 z-40 hidden lg:hidden" id="sidebarOverlay"></div>
@@ -276,8 +276,14 @@
                  dark:hover:text-[#02b7f5] hover:text-[#0288d1] justify-between">
           <span class="flex items-center gap-3">
             <i class="fa-solid fa-gamepad w-5"></i>
-            <span>Jouer</span>
+            <span>Jouer Solo</span>
           </span>
+        </a>
+
+        <a href="../room/lobby.html" class="flex items-center gap-3 py-3 px-4 rounded-xl font-rajdhani font-semibold text-sm transition-all
+                           dark:text-[#94a3b8] text-[#475569] dark:hover:bg-[rgba(2,183,245,0.07)] hover:bg-[rgba(2,183,245,0.1)]
+                           dark:hover:text-[#02b7f5] hover:text-[#0288d1]">
+          <i class="fa-solid fa-users w-5"></i><span>Multijoueur</span>
         </a>
 
         
@@ -324,10 +330,7 @@
         <button id="menuToggle" class="lg:hidden">
           <i class="fa-solid fa-bars text-primary text-xl"></i>
         </button>
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-user-pen text-primary"></i>
-          <span class="font-rajdhani font-semibold text-sm dark:text-white text-[#0a0f1e]">Mon Compte</span>
-        </div>
+        
       </div>
 
       <div class="flex items-center gap-4">

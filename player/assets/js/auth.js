@@ -172,10 +172,18 @@ async function handleConnexion(event) {
       return
     }
 
-    showToast('Connexion réussie ! Vous serez rediriger vers l\'arène...', 'success')
-    setTimeout(() => {
-      window.location.href = BASE_URL + '/game.html'
-    }, 1000)
+      // Remplacer cette partie dans handleConnexion
+  showToast('Connexion réussie ! Vous serez redirigé vers votre tableau de bord...', 'success')
+  setTimeout(() => {
+    // Vérifier si un redirect est dans l'URL
+    const params   = new URLSearchParams(window.location.search)
+    const redirect = params.get('redirect')
+    if (redirect) {
+      window.location.href = BASE_URL.replace('/player', '') + '/' + redirect
+    } else {
+      window.location.href = BASE_URL + '/dashboard.html'
+    }
+  }, 1000)
 
   } catch (err) {
     showToast('Une erreur inattendue est survenue.', 'error')
