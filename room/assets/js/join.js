@@ -383,32 +383,46 @@
   //  ÉCOUTER LE LANCEMENT — Realtime
   // ============================================================
   function listenToRoom(roomId) {
-    roomChannel = sb.channel(`room-guest-${roomId}`)
-      .on('postgres_changes', {
-        event:  'UPDATE',
-        schema: 'public',
-        table:  'multiplayer_rooms',
-        filter: `id=eq.${roomId}`
-      }, (payload) => {
-        const room = payload.new
+  roomChannel?.unsubscribe()
+  
+  roomChannel = sb.channel(`room-${roomId}`)
+    .on('postgres_changes', {
+      event:  'UPDATE',
+      schema: 'public',
+      table:  'multiplayer_rooms',
+      filter: `id=eq.${roomId}`
+    }, (payload) => {
+      const room = payload.new
+      console.log('[JOIN] Realtime update reçu:', room.status)
 
-        // J1 a lancé la partie
-        if (room.status === 'playing') {
-          goToGame(roomId)
-        }
+      if (room.status === 'playing') {
+        goToGame(roomId)
+      }
 
-        // Salle annulée par J1
-        if (room.status === 'abandoned') {
-          showToast('L\'hôte a annulé la salle', 'warning')
-          setTimeout(() => {
-            document.getElementById('screen-waiting').classList.add('hidden')
-            document.getElementById('screen-code').classList.remove('hidden')
-            currentRoom = null
-          }, 2000)
-        }
-      })
-      .subscribe()
-  }
+      if (room.status === 'abandoned') {
+        showToast('L\'hôte a annulé la salle', 'warning')
+        roomChannel?.unsubscribe()
+        setTimeout(() => {
+          document.getElementById('screen-waiting')?.classList.add('hidden')
+          document.getElementById('screen-code')?.classList.remove('hidden')
+          currentRoom = null
+        }, 2000)
+      }
+    })
+    .subscribe((status) => {
+      console.log('[JOIN] Channel status:', status)
+      if (status === 'SUBSCRIBED') {
+        // Vérifier si la partie a déjà été lancée pendant la souscription
+        sb.from('multiplayer_rooms')
+          .select('status')
+          .eq('id', roomId)
+          .single()
+          .then(({ data: room }) => {
+            if (room?.status === 'playing') goToGame(roomId)
+          })
+      }
+    })
+}
 
   // ============================================================
   //  QUITTER LA SALLE
