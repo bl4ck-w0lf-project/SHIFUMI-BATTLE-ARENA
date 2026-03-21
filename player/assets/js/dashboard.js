@@ -646,7 +646,7 @@
     await sb.from('invitations').update({ status }).eq('id', invitationId)
     if (status === 'accepted') {
       await sb.from('multiplayer_rooms').update({ guest_id: currentUser.id, status: 'playing' }).eq('id', roomId)
-      window.location.href = BASE_URL + '/player/game_pvp.html?room=' + roomId
+      window.location.href = BASE_URL + '/room/game_pvp.html?room=' + roomId
     }
   }
 
