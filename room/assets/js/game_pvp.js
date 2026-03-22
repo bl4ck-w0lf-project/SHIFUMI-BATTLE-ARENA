@@ -118,11 +118,12 @@
     await initPresence()
 
     if (isHost) {
+      // ★ FIX — pas de filtre current_round=0 qui cause une erreur 400
+      // si la salle a déjà un current_round > 0 (reconnexion)
       const now = new Date().toISOString()
       await sb.from('multiplayer_rooms')
         .update({ round_started_at: now })
         .eq('id', roomId)
-        .eq('current_round', 0)
       startRound(now, room.countdown_seconds || 15)
     } else {
       if (room.round_started_at) {
@@ -417,8 +418,12 @@
 
       // Capturer le round actuel AVANT le setInterval pour la comparaison
       const roundJustPlayed = data.current_round
+      // ★ FIX — flag pour éviter que waitNext fire deux fois
+      let waitNextFired = false
 
       const waitNext = setInterval(async () => {
+        if (waitNextFired) { clearInterval(waitNext); return }
+
         const { data: next } = await sb
           .from('multiplayer_rooms')
           .select('round_started_at, current_round, host_move, guest_move, status, countdown_seconds, total_rounds')
@@ -434,13 +439,12 @@
           return
         }
 
-        // ★ FIX — utiliser !next.host_move au lieu de === null
-        // Supabase retourne undefined pour les champs remis à null, pas null
-        // On vérifie que current_round a bien changé ET les moves sont vides
+        // Supabase retourne undefined pour les champs remis à null, pas null strict
         const roundChanged  = next.current_round > roundJustPlayed
         const movesAreEmpty = !next.host_move && !next.guest_move
 
         if (roundChanged && movesAreEmpty && next.round_started_at) {
+          waitNextFired = true  // ★ empêche double déclenchement
           clearInterval(waitNext)
           expectedRound = next.current_round
           updateRoundCounter(next.current_round + 1, next.total_rounds)
