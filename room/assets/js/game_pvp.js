@@ -279,24 +279,29 @@
   }
 
   // ============================================================
-  //  POLLING — FIX MAJEUR : vérification du round attendu
+  //  POLLING — avec logs debug
   // ============================================================
   function startPollResult() {
     stopPollResult()
+    console.log(`[POLL START] isHost=${isHost} expectedRound=${expectedRound}`)
     pollInterval = setInterval(async () => {
       if (!room || processingResult) return
       try {
         const { data } = await sb
           .from('multiplayer_rooms')
-          .select('host_move, guest_move, status, round_started_at, current_round, total_rounds, host_score, guest_score, draw_score, winner_id, countdown_seconds')
+          .select('id, host_move, guest_move, status, round_started_at, current_round, total_rounds, host_score, guest_score, draw_score, winner_id, countdown_seconds')
           .eq('id', room.id)
           .single()
 
         if (!data) return
 
-        // ★ FIX CRITIQUE — ignorer si ce n'est pas le round qu'on attend
-        // Évite de traiter un ancien round déjà traité ou un round futur
-        if (data.current_round !== expectedRound) return
+        console.log(`[POLL] current_round=${data.current_round} expected=${expectedRound} host_move=${JSON.stringify(data.host_move)} guest_move=${JSON.stringify(data.guest_move)} status=${data.status}`)
+
+        // Ignorer si ce n'est pas le round qu'on attend
+        if (data.current_round !== expectedRound) {
+          console.log(`[POLL SKIP] round ${data.current_round} != expected ${expectedRound}`)
+          return
+        }
 
         // Partie terminée
         if (data.status === 'finished' || data.status === 'abandoned') {
@@ -317,17 +322,17 @@
           }
         }
 
-        // ★ FIX — utiliser truthy check au lieu de && direct
-        // host_move et guest_move peuvent être undefined quand remis à null par Supabase
         const bothPlayed = !!data.host_move && !!data.guest_move
+        console.log(`[POLL] bothPlayed=${bothPlayed} processingResult=${processingResult}`)
         if (bothPlayed && !processingResult) {
           processingResult = true
           stopPollResult()
           clearInterval(countdownInterval)
+          console.log(`[POLL TRIGGER] processRoundResult round=${data.current_round}`)
           await processRoundResult(data)
         }
 
-      } catch (e) { /* silencieux */ }
+      } catch (e) { console.error('[POLL ERROR]', e) }
     }, 2000)
   }
 
@@ -359,6 +364,7 @@
   // ============================================================
   async function processRoundResult(data) {
     roundInProgress = false
+    console.log(`[PROCESS] round=${data.current_round} host_move=${data.host_move} guest_move=${data.guest_move} isHost=${isHost}`)
 
     const hostMove   = data.host_move
     const guestMove  = data.guest_move
@@ -401,13 +407,13 @@
         const newStart = new Date().toISOString()
         await sb.from('multiplayer_rooms').update({
           current_round:    nextRound,
-          host_move:        null,      // ★ reset les coups
-          guest_move:       null,      // ★ reset les coups
+          host_move:        null,
+          guest_move:       null,
           round_started_at: newStart,
           host_score:       hostScore,
           guest_score:      guestScore,
           draw_score:       scoreDraw,
-        }).eq('id', data.id)
+        }).eq('id', room.id)  // ★ room.id — toujours disponible
 
         updateRoundCounter(nextRound + 1, data.total_rounds)
         startRound(newStart, data.countdown_seconds || 15)
@@ -442,6 +448,7 @@
         // Supabase retourne undefined pour les champs remis à null, pas null strict
         const roundChanged  = next.current_round > roundJustPlayed
         const movesAreEmpty = !next.host_move && !next.guest_move
+        console.log(`[WAIT_NEXT] current_round=${next.current_round} roundJustPlayed=${roundJustPlayed} roundChanged=${roundChanged} movesAreEmpty=${movesAreEmpty} host_move=${JSON.stringify(next.host_move)} guest_move=${JSON.stringify(next.guest_move)}`)
 
         if (roundChanged && movesAreEmpty && next.round_started_at) {
           waitNextFired = true  // ★ empêche double déclenchement
