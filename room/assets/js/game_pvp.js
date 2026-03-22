@@ -386,8 +386,8 @@
     else                          scoreDraw++
     updateScoreUI()
 
-    const dotIndex = data.current_round - 1
-    markDot(dotIndex >= 0 ? dotIndex : 0, myResult)
+    // ★ FIX dots — current_round est l'index du round qui vient d'être joué (0, 1, 2...)
+    markDot(data.current_round, myResult)
 
     await delay(400)
     showRoundBanner(myResult, myMoveNow, oppMoveNow)
@@ -422,6 +422,28 @@
       // GUEST — attend que le HOST mette à jour la BDD pour le prochain round
       await delay(2000)
 
+      // ★ FIX — si c'est le dernier round, ne pas lancer waitNext
+      // Le HOST va mettre status='finished' → on poll directement
+      if (data.current_round + 1 >= data.total_rounds) {
+        // Attendre que le HOST finalise la partie
+        let finalFired = false
+        const waitFinal = setInterval(async () => {
+          if (finalFired) { clearInterval(waitFinal); return }
+          const { data: final } = await sb
+            .from('multiplayer_rooms')
+            .select('*')
+            .eq('id', room.id)
+            .single()
+          if (!final) return
+          if (final.status === 'finished') {
+            finalFired = true
+            clearInterval(waitFinal)
+            showFinalResult(final)
+          }
+        }, 1000)
+        return
+      }
+
       // Capturer le round actuel AVANT le setInterval pour la comparaison
       const roundJustPlayed = data.current_round
       // ★ FIX — flag pour éviter que waitNext fire deux fois
@@ -438,7 +460,9 @@
 
         if (!next) return
 
+        // Sécurité — si la partie est finie pendant l'attente
         if (next.status === 'finished') {
+          waitNextFired = true
           clearInterval(waitNext)
           const { data: final } = await sb.from('multiplayer_rooms').select('*').eq('id', room.id).single()
           if (final) showFinalResult(final)
@@ -451,7 +475,7 @@
         console.log(`[WAIT_NEXT] current_round=${next.current_round} roundJustPlayed=${roundJustPlayed} roundChanged=${roundChanged} movesAreEmpty=${movesAreEmpty} host_move=${JSON.stringify(next.host_move)} guest_move=${JSON.stringify(next.guest_move)}`)
 
         if (roundChanged && movesAreEmpty && next.round_started_at) {
-          waitNextFired = true  // ★ empêche double déclenchement
+          waitNextFired = true
           clearInterval(waitNext)
           expectedRound = next.current_round
           updateRoundCounter(next.current_round + 1, next.total_rounds)
