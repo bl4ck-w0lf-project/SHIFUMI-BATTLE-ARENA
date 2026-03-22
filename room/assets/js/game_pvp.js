@@ -127,7 +127,6 @@
     initAbandon()
     initCardSelection()
     initPresence()
-    startPing(roomId)
     listenToRoom(roomId)
 
     // Si le round est déjà commencé (reconnexion)
@@ -145,8 +144,9 @@
     })
     presenceChannel
       .on('presence', { event: 'sync' }, () => {
-        checkOpponentPresence()
-      })
+  // Ne pas vérifier immédiatement — laisser le temps aux deux joueurs de tracker
+  setTimeout(() => checkOpponentPresence(), 3000)
+})
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
         const oppId = isHost ? room.guest_id : room.host_id
         if (leftPresences.some(p => p.user_id === oppId)) {
@@ -211,16 +211,7 @@
     showToast('Adversaire reconnecté !', 'success')
   }
 
-  // ============================================================
-  //  PING — last_activity toutes les 10s
-  // ============================================================
-  function startPing(roomId) {
-    pingInterval = setInterval(async () => {
-      await sb.from('multiplayer_rooms')
-        .update({ last_activity: new Date().toISOString() })
-        .eq('id', roomId)
-    }, 10000)
-  }
+  
 
   // ============================================================
   //  REALTIME — écouter les changements de la salle
