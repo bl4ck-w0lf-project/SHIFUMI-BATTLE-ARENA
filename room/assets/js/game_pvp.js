@@ -183,6 +183,16 @@
       await sb.from('multiplayer_rooms')
         .update({ [moveCol]: myMove })
         .eq('id', room.id)
+        console.log('[VALIDATE ERROR]', error)
+
+              // ★ Arrêter le countdown
+      clearInterval(countdownInterval)
+      const num  = document.getElementById('countdown-number')
+      const ring = document.getElementById('countdown-ring')
+      const bar  = document.getElementById('countdown-bar')
+      if (num)  num.textContent = '✓'
+      if (ring) ring.style.stroke = '#22c55e'
+      if (bar)  { bar.style.width = '100%'; bar.style.background = '#22c55e' }
 
       this.innerHTML = '<i class="fa-solid fa-check mr-2"></i> COUP SOUMIS !'
       document.getElementById('my-status').classList.remove('hidden')
