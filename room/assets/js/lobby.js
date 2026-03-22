@@ -6,17 +6,15 @@
   const sb       = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   const BASE_URL = window.location.origin
 
-  let currentUser           = null
-  let currentProfile        = null
-  let currentRoom           = null
-  let totalRounds           = 5
-  let presenceChannel       = null
-  let roomChannel           = null
-  let expiryTimer           = null
-  let pollTimer             = null
-  let onlinePlayers         = {}
-  let startPvpListenerAdded = false
-  let guestAlreadyJoined    = false
+  let currentUser        = null
+  let currentProfile     = null
+  let currentRoom        = null
+  let totalRounds        = 5
+  let presenceChannel    = null
+  let expiryTimer        = null
+  let pollTimer          = null
+  let onlinePlayers      = {}
+  let guestAlreadyJoined = false
 
   // ============================================================
   //  INIT
@@ -207,9 +205,8 @@
         .single()
 
       if (error) throw error
-      currentRoom           = room
-      startPvpListenerAdded = false
-      guestAlreadyJoined    = false
+      currentRoom        = room
+      guestAlreadyJoined = false
 
       await presenceChannel.track({
         user_id:  currentUser.id,
@@ -219,7 +216,6 @@
       })
 
       showRoomScreen(room)
-      listenToRoom(room.id)
       startPolling(room.id)
       startExpiryCountdown(room.expires_at)
 
@@ -238,6 +234,7 @@
     document.getElementById('screen-setup').classList.add('hidden')
     document.getElementById('screen-room').classList.remove('hidden')
 
+    // Code avec cases stylisées
     const codeDisplay = document.getElementById('room-code-display')
     codeDisplay.innerHTML = room.code.split('').map((char, i) => `
       <div class="code-char dark:bg-[rgba(2,183,245,0.1)] bg-[rgba(2,183,245,0.08)]
@@ -270,29 +267,8 @@
   }
 
   // ============================================================
-  //  REALTIME — backup si le polling rate quelque chose
-  // ============================================================
-  function listenToRoom(roomId) {
-    roomChannel?.unsubscribe()
-    roomChannel = sb.channel(`room-host-${roomId}`)
-      .on('postgres_changes', {
-        event:  'UPDATE',
-        schema: 'public',
-        table:  'multiplayer_rooms',
-        filter: `id=eq.${roomId}`
-      }, async (payload) => {
-        const room = payload.new
-        if (room.guest_id && !guestAlreadyJoined) {
-          guestAlreadyJoined = true
-          currentRoom = { ...currentRoom, ...room }
-          await onGuestJoined(room.guest_id)
-        }
-      })
-      .subscribe()
-  }
-
-  // ============================================================
-  //  POLLING — toutes les 3s, source principale de vérité
+  //  POLLING — toutes les 3s
+  //  Dès que guest_id est rempli → les deux vont sur game_pvp
   // ============================================================
   function startPolling(roomId) {
     stopPolling()
@@ -307,8 +283,10 @@
 
         if (room?.guest_id && !guestAlreadyJoined) {
           guestAlreadyJoined = true
-          currentRoom = { ...currentRoom, ...room }
-          await onGuestJoined(room.guest_id)
+          stopPolling()
+          currentRoom = { ...currentRoom, guest_id: room.guest_id }
+          // ★ DIRECT — pas de bouton "Lancer", on y va tout de suite
+          goToGame(roomId)
         }
       } catch (e) { /* silencieux */ }
     }, 3000)
@@ -319,44 +297,7 @@
   }
 
   // ============================================================
-  //  GUEST A REJOINT
-  // ============================================================
-  async function onGuestJoined(guestId) {
-    stopPolling()
-
-    const { data: guestProfile } = await sb
-      .from('profiles')
-      .select('first_name, last_name, username')
-      .eq('id', guestId)
-      .single()
-
-    const name = guestProfile
-      ? `@${guestProfile.username} — ${guestProfile.first_name} ${guestProfile.last_name}`
-      : 'Un adversaire'
-
-    document.getElementById('waiting-status').classList.add('hidden')
-    document.getElementById('guest-arrived').classList.remove('hidden')
-    document.getElementById('guest-name').textContent = name
-
-    if (expiryTimer) clearInterval(expiryTimer)
-    showToast(`${name} a rejoint ! Lance la partie 🎮`, 'success')
-
-    if (!startPvpListenerAdded) {
-      startPvpListenerAdded = true
-      document.getElementById('btn-start-pvp').addEventListener('click', async () => {
-        const btn = document.getElementById('btn-start-pvp')
-        btn.disabled = true
-        btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-2"></i> Lancement...'
-        await sb.from('multiplayer_rooms')
-          .update({ status: 'playing', round_started_at: new Date().toISOString() })
-          .eq('id', currentRoom.id)
-        goToGame(currentRoom.id)
-      })
-    }
-  }
-
-  // ============================================================
-  //  INVITER UN JOUEUR — envoie juste l'invitation, pas de tracking
+  //  INVITER UN JOUEUR
   // ============================================================
   window.invitePlayer = async function (toId, toUsername) {
     if (!currentRoom) { showToast('Crée une salle d\'abord !', 'warning'); return }
@@ -377,7 +318,6 @@
         room_id: currentRoom.id
       })
       showToast(`Invitation envoyée à @${toUsername} !`, 'success')
-      // Le polling détectera automatiquement quand le guest rejoint
 
     } catch (err) {
       console.error('Erreur invitation:', err)
@@ -395,10 +335,7 @@
     document.getElementById('screen-setup').classList.remove('hidden')
     document.getElementById('btn-create-room').disabled = false
     document.getElementById('btn-create-room').innerHTML = '<i class="fa-solid fa-plus mr-2"></i> CRÉER LA SALLE'
-    document.getElementById('guest-arrived').classList.add('hidden')
-    document.getElementById('waiting-status').classList.remove('hidden')
-    startPvpListenerAdded = false
-    guestAlreadyJoined    = false
+    guestAlreadyJoined = false
   })
 
   async function cancelRoom() {
@@ -408,7 +345,6 @@
       await sb.from('multiplayer_rooms')
         .update({ status: 'abandoned', expires_at: new Date().toISOString() })
         .eq('id', currentRoom.id)
-      roomChannel?.unsubscribe()
       if (expiryTimer) clearInterval(expiryTimer)
       currentRoom = null
       await presenceChannel.track({
@@ -441,10 +377,7 @@
         document.getElementById('screen-setup').classList.remove('hidden')
         document.getElementById('btn-create-room').disabled = false
         document.getElementById('btn-create-room').innerHTML = '<i class="fa-solid fa-plus mr-2"></i> CRÉER LA SALLE'
-        document.getElementById('guest-arrived').classList.add('hidden')
-        document.getElementById('waiting-status').classList.remove('hidden')
-        startPvpListenerAdded = false
-        guestAlreadyJoined    = false
+        guestAlreadyJoined = false
       }
     }, 1000)
   }
@@ -454,6 +387,7 @@
   // ============================================================
   function goToGame(roomId) {
     stopPolling()
+    if (expiryTimer) clearInterval(expiryTimer)
     presenceChannel?.track({
       user_id:  currentUser.id,
       username: currentProfile?.username || '',
