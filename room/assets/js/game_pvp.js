@@ -47,6 +47,9 @@
     if (!session) { window.location.href = BASE_URL + '/player/connexion.html'; return }
     currentUser = session.user
 
+    document.body.style.visibility = 'visible'
+    document.body.style.opacity    = '1'
+
     const roomId = new URLSearchParams(window.location.search).get('room')
     if (!roomId) { window.location.href = BASE_URL + '/room/lobby.html'; return }
 
@@ -629,6 +632,7 @@
     }
   }
 
+  initTheme()
   init()
 
 })()
