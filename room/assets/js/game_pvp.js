@@ -16,7 +16,7 @@
   let countdownInterval = null
   let disconnectTimer   = null
   let roundInProgress   = false
-  let presenceReady     = false  // ★ évite faux disconnect au démarrage
+  let presenceReady     = false
 
   let scoreMe   = 0
   let scoreOpp  = 0
@@ -33,8 +33,8 @@
 
   function moveSVG(move, color) {
     if (move === 'timeout') return `<i class="fa-solid fa-hourglass-end" style="font-size:36px;color:${color}"></i>`
-    if (move === 'rock')     return `<svg width="48" height="48" viewBox="0 0 256 256" fill="${color}"><path d="M200,80H184V64a31.97943,31.97943,0,0,0-56-21.13208A31.97443,31.97443,0,0,0,72.20508,60.4231,31.978,31.978,0,0,0,24,88v40a104,104,0,0,0,208,0V112A32.03635,32.03635,0,0,0,200,80ZM152,48a16.01833,16.01833,0,0,1,16,16V80H136V64A16.01833,16.01833,0,0,1,152,48ZM88,64a16,16,0,0,1,32,0v40a16,16,0,0,1-32,0V64ZM40,88a16,16,0,0,1,32,0v16a16,16,0,0,1-32,0Zm88,128a88.10627,88.10627,0,0,1-87.9209-84.249A31.94065,31.94065,0,0,0,80,125.13208a31.92587,31.92587,0,0,0,44.58057,3.34595,32.23527,32.23527,0,0,0,11.79443,11.4414A47.906,47.906,0,0,0,120,176a8,8,0,0,0,16,0,32.03635,32.03635,0,0,1,32-32,8,8,0,0,0,0-16H152a16.01833,16.01833,0,0,1-16-16V96h64a16.01833,16.01833,0,0,1,16,16v16A88.09957,88.09957,0,0,1,128,216Z"/></svg>`
-    if (move === 'paper')    return `<svg width="48" height="48" viewBox="0 0 485 485" fill="${color}"><path d="M382.5,69.429c-7.441,0-14.5,1.646-20.852,4.573c-4.309-23.218-24.7-40.859-49.148-40.859c-7.68,0-14.958,1.744-21.467,4.852C285.641,16.205,265.932,0,242.5,0c-23.432,0-43.141,16.206-48.533,37.995c-6.508-3.107-13.787-4.852-21.467-4.852c-27.57,0-50,22.43-50,50v122.222c-6.129-2.686-12.891-4.187-20-4.187c-27.57,0-50,22.43-50,50V354c0,72.233,58.766,131,131,131h118c72.233,0,131-58.767,131-131V119.429C432.5,91.858,410.07,69.429,382.5,69.429z M402.5,354c0,55.691-45.309,101-101,101h-118c-55.691,0-101-45.309-101-101V251.178c0-11.028,8.972-20,20-20s20,8.972,20,20v80h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30V50c0-11.028,8.972-20,20-20c11.028,0,20,8.972,20,20v191.178h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30v-121.75c0-11.028,8.972-20,20-20s20,8.972,20,20V354z"/></svg>`
+    if (move === 'rock')    return `<svg width="48" height="48" viewBox="0 0 256 256" fill="${color}"><path d="M200,80H184V64a31.97943,31.97943,0,0,0-56-21.13208A31.97443,31.97443,0,0,0,72.20508,60.4231,31.978,31.978,0,0,0,24,88v40a104,104,0,0,0,208,0V112A32.03635,32.03635,0,0,0,200,80ZM152,48a16.01833,16.01833,0,0,1,16,16V80H136V64A16.01833,16.01833,0,0,1,152,48ZM88,64a16,16,0,0,1,32,0v40a16,16,0,0,1-32,0V64ZM40,88a16,16,0,0,1,32,0v16a16,16,0,0,1-32,0Zm88,128a88.10627,88.10627,0,0,1-87.9209-84.249A31.94065,31.94065,0,0,0,80,125.13208a31.92587,31.92587,0,0,0,44.58057,3.34595,32.23527,32.23527,0,0,0,11.79443,11.4414A47.906,47.906,0,0,0,120,176a8,8,0,0,0,16,0,32.03635,32.03635,0,0,1,32-32,8,8,0,0,0,0-16H152a16.01833,16.01833,0,0,1-16-16V96h64a16.01833,16.01833,0,0,1,16,16v16A88.09957,88.09957,0,0,1,128,216Z"/></svg>`
+    if (move === 'paper')   return `<svg width="48" height="48" viewBox="0 0 485 485" fill="${color}"><path d="M382.5,69.429c-7.441,0-14.5,1.646-20.852,4.573c-4.309-23.218-24.7-40.859-49.148-40.859c-7.68,0-14.958,1.744-21.467,4.852C285.641,16.205,265.932,0,242.5,0c-23.432,0-43.141,16.206-48.533,37.995c-6.508-3.107-13.787-4.852-21.467-4.852c-27.57,0-50,22.43-50,50v122.222c-6.129-2.686-12.891-4.187-20-4.187c-27.57,0-50,22.43-50,50V354c0,72.233,58.766,131,131,131h118c72.233,0,131-58.767,131-131V119.429C432.5,91.858,410.07,69.429,382.5,69.429z M402.5,354c0,55.691-45.309,101-101,101h-118c-55.691,0-101-45.309-101-101V251.178c0-11.028,8.972-20,20-20s20,8.972,20,20v80h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30V50c0-11.028,8.972-20,20-20c11.028,0,20,8.972,20,20v191.178h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30v-121.75c0-11.028,8.972-20,20-20s20,8.972,20,20V354z"/></svg>`
     if (move === 'scissors') return `<svg width="48" height="48" viewBox="0 0 32 32" fill="${color}"><path d="${SCISSORS_PATH}"/></svg>`
     return `<svg width="40" height="40" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="28" stroke="${color}" stroke-width="3" stroke-dasharray="6 6" fill="none"/><circle cx="40" cy="40" r="4" fill="${color}"/></svg>`
   }
@@ -106,26 +106,32 @@
     initTheme()
     initAbandon()
     initCardSelection()
-
-    // ★ Démarrer la présence — avec délai avant d'activer la vérification disconnect
     await initPresence()
-
-    // ★ Écouter les changements de la salle
     listenToRoom(roomId)
 
-    // ★ Démarrer le countdown — si host, il initialise round_started_at
+    // ★ HOST : démarre round_started_at dès qu'il arrive
     if (isHost) {
-      // Le host démarre le premier round
       await sb.from('multiplayer_rooms')
         .update({ round_started_at: new Date().toISOString() })
         .eq('id', roomId)
-        .eq('current_round', 0) // seulement si pas encore commencé
+        .eq('current_round', 0)
       startCountdown(new Date().toISOString(), room.countdown_seconds || 15)
     } else {
-      // Le guest attend le round_started_at via Realtime
-      // Mais on démarre quand même avec la valeur actuelle si elle existe
+      // ★ GUEST : démarre si round_started_at existe déjà, sinon polling
       if (room.round_started_at) {
         startCountdown(room.round_started_at, room.countdown_seconds || 15)
+      } else {
+        const waitRound = setInterval(async () => {
+          const { data } = await sb
+            .from('multiplayer_rooms')
+            .select('round_started_at, countdown_seconds')
+            .eq('id', roomId)
+            .single()
+          if (data?.round_started_at) {
+            clearInterval(waitRound)
+            startCountdown(data.round_started_at, data.countdown_seconds || 15)
+          }
+        }, 1000)
       }
     }
   }
@@ -137,24 +143,18 @@
     presenceChannel = sb.channel('shifumi-presence', {
       config: { presence: { key: currentUser.id } }
     })
-
     presenceChannel
       .on('presence', { event: 'sync' }, () => {
-        // ★ Ne vérifier la présence qu'après que les deux aient eu le temps de tracker
         if (presenceReady) checkOpponentPresence()
       })
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
         if (!presenceReady) return
         const oppId = isHost ? room.guest_id : room.host_id
-        if (leftPresences.some(p => p.user_id === oppId)) {
-          handleOpponentDisconnect()
-        }
+        if (leftPresences.some(p => p.user_id === oppId)) handleOpponentDisconnect()
       })
       .on('presence', { event: 'join' }, ({ newPresences }) => {
         const oppId = isHost ? room.guest_id : room.host_id
-        if (newPresences.some(p => p.user_id === oppId)) {
-          handleOpponentReconnect()
-        }
+        if (newPresences.some(p => p.user_id === oppId)) handleOpponentReconnect()
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -164,8 +164,6 @@
             status:   'in_game',
             since:    new Date().toISOString()
           })
-          // ★ Attendre 5s avant d'activer la détection de disconnect
-          // pour laisser le temps aux deux joueurs de tracker leur présence
           setTimeout(() => { presenceReady = true }, 5000)
         }
       })
@@ -183,7 +181,7 @@
   }
 
   // ============================================================
-  //  DÉCONNEXION ADVERSAIRE
+  //  DÉCONNEXION
   // ============================================================
   let disconnectCountdown = 30
 
@@ -191,7 +189,6 @@
     if (disconnectTimer) return
     document.getElementById('disconnect-warning')?.classList.remove('hidden')
     disconnectCountdown = 30
-
     disconnectTimer = setInterval(async () => {
       disconnectCountdown--
       setEl('disconnect-countdown', disconnectCountdown + 's')
@@ -212,7 +209,7 @@
   }
 
   // ============================================================
-  //  REALTIME — écouter les changements de la salle
+  //  REALTIME
   // ============================================================
   function listenToRoom(roomId) {
     roundChannel = sb.channel(`pvp-room-${roomId}`)
@@ -225,29 +222,33 @@
         const updated = payload.new
         room = updated
 
-        // ★ Guest : démarrer le countdown quand host set round_started_at
-        if (!isHost && updated.round_started_at && !roundInProgress) {
+        // ★ GUEST : démarrer countdown seulement sur nouveau round
+        // (host_move et guest_move sont null = nouveau round)
+        if (!isHost &&
+            updated.round_started_at &&
+            !roundInProgress &&
+            !updated.host_move &&
+            !updated.guest_move) {
           startCountdown(updated.round_started_at, updated.countdown_seconds || 15)
         }
 
-        const oppMove    = isHost ? updated.guest_move : updated.host_move
-        const hostMove   = updated.host_move
-        const guestMove  = updated.guest_move
-
-        if (oppMove && oppMove !== 'waiting' && oppMove !== null) {
+        // Adversaire a joué
+        const oppMove = isHost ? updated.guest_move : updated.host_move
+        if (oppMove && oppMove !== null) {
           setEl('opp-status', oppMove === 'timeout' ? '⏰ Timeout' : '✓ A joué')
-          const oppStatusEl = document.getElementById('opp-status')
-          if (oppStatusEl) {
-            oppStatusEl.classList.remove('dark:text-[#475569]','text-[#94a3b8]')
-            oppStatusEl.classList.add('text-win')
+          const el = document.getElementById('opp-status')
+          if (el) {
+            el.classList.remove('dark:text-[#475569]', 'text-[#94a3b8]')
+            el.classList.add('text-win')
           }
         }
 
-        if (hostMove && guestMove &&
-            hostMove !== 'waiting' && guestMove !== 'waiting') {
+        // Les deux ont joué
+        if (updated.host_move && updated.guest_move) {
           await processRoundResult(updated)
         }
 
+        // Partie terminée
         if (updated.status === 'finished' || updated.status === 'abandoned') {
           clearInterval(countdownInterval)
           showFinalResult(updated)
@@ -262,7 +263,7 @@
   function initCardSelection() {
     document.querySelectorAll('.choice-card').forEach(card => {
       card.addEventListener('click', async function () {
-        if (roundInProgress === false || myMove) return
+        if (!roundInProgress || myMove) return
 
         document.querySelectorAll('.choice-card').forEach(c => c.classList.remove('selected'))
         this.classList.add('selected')
@@ -289,17 +290,15 @@
     roundInProgress = true
     myMove = null
 
-    document.querySelectorAll('.choice-card').forEach(c => {
-      c.classList.remove('selected', 'disabled')
-    })
+    document.querySelectorAll('.choice-card').forEach(c => c.classList.remove('selected', 'disabled'))
     document.getElementById('my-status')?.classList.add('hidden')
     document.getElementById('my-move-display').innerHTML  = moveSVG(null, '#02b7f5')
     document.getElementById('my-move-label').textContent  = '—'
     document.getElementById('opp-move-display').innerHTML = moveSVG(null, '#a855f7')
     document.getElementById('opp-move-label').textContent = '—'
     setEl('opp-status', 'En attente…')
-    const oppStatusEl = document.getElementById('opp-status')
-    if (oppStatusEl) oppStatusEl.className = 'font-rajdhani text-[10px] dark:text-[#475569] text-[#94a3b8] mt-1'
+    const oppEl = document.getElementById('opp-status')
+    if (oppEl) oppEl.className = 'font-rajdhani text-[10px] dark:text-[#475569] text-[#94a3b8] mt-1'
 
     const CIRCUMFERENCE = 276.46
     const ring = document.getElementById('countdown-ring')
@@ -311,20 +310,20 @@
       const remaining = Math.max(0, totalSeconds - Math.floor(elapsed))
       const pct       = remaining / totalSeconds
 
-      if (num) num.textContent = remaining
+      if (num)  num.textContent = remaining
       if (ring) ring.style.strokeDashoffset = CIRCUMFERENCE * (1 - pct)
       if (bar)  bar.style.width = (pct * 100) + '%'
 
       if (remaining <= 5) {
-        if (num) num.className = 'font-orbitron font-black text-3xl countdown-danger'
+        if (num)  num.className = 'font-orbitron font-black text-3xl countdown-danger'
         if (ring) ring.style.stroke = '#ef4444'
         if (bar)  bar.classList.add('bar-danger')
       } else if (remaining <= 10) {
-        if (num) num.className = 'font-orbitron font-black text-3xl text-draw'
+        if (num)  num.className = 'font-orbitron font-black text-3xl text-draw'
         if (ring) ring.style.stroke = '#f59e0b'
         if (bar)  { bar.classList.remove('bar-danger'); bar.style.background = '#f59e0b' }
       } else {
-        if (num) num.className = 'font-orbitron font-black text-3xl text-primary'
+        if (num)  num.className = 'font-orbitron font-black text-3xl text-primary'
         if (ring) ring.style.stroke = '#02b7f5'
         if (bar)  { bar.classList.remove('bar-danger'); bar.style.background = '#02b7f5' }
       }
@@ -358,8 +357,8 @@
     clearInterval(countdownInterval)
     roundInProgress = false
 
-    const hostMove  = updatedRoom.host_move
-    const guestMove = updatedRoom.guest_move
+    const hostMove   = updatedRoom.host_move
+    const guestMove  = updatedRoom.guest_move
     const myMoveNow  = isHost ? hostMove  : guestMove
     const oppMoveNow = isHost ? guestMove : hostMove
 
@@ -425,7 +424,6 @@
   // ============================================================
   async function finishGame(forcedWinner = null, hostScore = null, guestScore = null) {
     clearInterval(countdownInterval)
-
     const hScore = hostScore  ?? (isHost ? scoreMe : scoreOpp)
     const gScore = guestScore ?? (isHost ? scoreOpp : scoreMe)
 
