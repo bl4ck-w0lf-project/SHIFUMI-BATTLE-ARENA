@@ -272,21 +272,23 @@
   function startPolling(roomId) {
     stopPolling()
     pollTimer = setInterval(async () => {
-      if (!currentRoom || guestAlreadyJoined) { stopPolling(); return }
-      try {
-        const { data: room } = await sb
-          .from('multiplayer_rooms')
-          .select('guest_id, status')
-          .eq('id', roomId)
-          .single()
+  if (!currentRoom || guestAlreadyJoined) { stopPolling(); return }
+  try {
+    const { data: room } = await sb
+      .from('multiplayer_rooms')
+      .select('guest_id, status')
+      .eq('id', roomId)
+      .single()
 
-        if ((room?.guest_id || room?.status === 'playing') && !guestAlreadyJoined) {
-          guestAlreadyJoined = true
-          stopPolling()
-          goToGame(roomId)
-        }
-      } catch (e) {}
-    }, 3000)
+    console.log('[POLL]', room?.status, room?.guest_id) // ← ajoute ça
+
+    if ((room?.guest_id || room?.status === 'playing') && !guestAlreadyJoined) {
+      guestAlreadyJoined = true
+      stopPolling()
+      goToGame(roomId)
+    }
+  } catch (e) { console.error('[POLL ERROR]', e) }
+}, 3000)
   }
 
   function stopPolling() {
