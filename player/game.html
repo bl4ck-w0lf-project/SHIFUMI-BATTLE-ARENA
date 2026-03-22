@@ -672,70 +672,67 @@
       })
     })
 
+
     // ============================================================
-    //  LOGIQUE IA — 3 niveaux
-    //  FACILE    : 100% aléatoire
-    //  MOYEN     : contre le coup le plus joué (80%), 20% aléatoire
-    //  DIFFICILE : analyse patterns + contre les séries de victoires
-    // ============================================================
-    function counterMove(move) {
-      return { rock: 'paper', paper: 'scissors', scissors: 'rock' }[move]
+//  LOGIQUE IA — 3 niveaux
+//  FACILE    : 55% crypto random + 45% analyse légère
+//  MOYEN     : 25% aléatoire + 75% analyse patterns
+//  DIFFICILE : 100% crypto random pur — impossible à lire
+// ============================================================
+function counterMove(move) {
+  return { rock: 'paper', paper: 'scissors', scissors: 'rock' }[move]
+}
+
+function mostPlayedMove(history) {
+  const valid = history.filter(m => ['rock','paper','scissors'].includes(m))
+  if (!valid.length) return 'rock'
+  const count = { rock: 0, paper: 0, scissors: 0 }
+  valid.forEach(m => count[m]++)
+  return Object.entries(count).sort((a, b) => b[1] - a[1])[0][0]
+}
+
+function getIAMove(playerHistory) {
+  const moves = ['rock', 'paper', 'scissors']
+  const rnd   = () => moves[Math.floor(Math.random() * 3)]
+
+  const rndExtreme = () => {
+    if (window.crypto?.getRandomValues) {
+      const arr = new Uint32Array(3)
+      window.crypto.getRandomValues(arr)
+      return moves[(arr[0] ^ arr[1] ^ arr[2]) % 3]
     }
+    return rnd()
+  }
 
-    function mostPlayedMove(history) {
-      const count = { rock: 0, paper: 0, scissors: 0 }
-      history.forEach(m => { if (count[m] !== undefined) count[m]++ })
-      return Object.entries(count).sort((a, b) => b[1] - a[1])[0][0]
+  const counter = (move) => {
+    const result = counterMove(move)
+    return moves.includes(result) ? result : rnd()
+  }
+
+  if (difficulty === 'easy') {
+    if (playerHistory.length < 2) return rndExtreme()
+    if (Math.random() < 0.55)     return rndExtreme()
+    return counter(mostPlayedMove(playerHistory))
+  }
+
+  if (difficulty === 'medium') {
+    if (!playerHistory.length) return rnd()
+    if (Math.random() < 0.25)  return rnd()
+    const recent = playerHistory.filter(m => moves.includes(m)).slice(-7)
+    if (!recent.length) return rnd()
+    const last = recent[recent.length - 1]
+    const prev = recent.length >= 2 ? recent[recent.length - 2] : null
+    if (prev && last === prev) {
+      return Math.random() < 0.8 ? counter(counter(last)) : rnd()
     }
+    if (playerWinStreak >= 2) return counter(last)
+    return counter(mostPlayedMove(recent))
+  }
 
-    // FIX : difficulty passé en variable globale, pas en paramètre
-    function getIAMove(playerHistory) {
-      const moves = ['rock', 'paper', 'scissors']
-      const rnd   = () => moves[Math.floor(Math.random() * 3)]
+  if (difficulty === 'hard') return rndExtreme()
 
-      // ── FACILE : totalement aléatoire ──────────────────────────
-      if (difficulty === 'easy') return rnd()
-
-      // ── MOYEN : experte ────────────────────────────────────────
-      // Contre le coup le plus joué 80% du temps
-      if (difficulty === 'medium') {
-        if (!playerHistory.length) return rnd()
-        if (Math.random() < 0.2) return rnd()
-        return counterMove(mostPlayedMove(playerHistory))
-      }
-
-      // ── DIFFICILE : diabolique ─────────────────────────────────
-      // Analyse les 7 derniers coups + casse les séries du joueur
-      if (difficulty === 'hard') {
-        if (!playerHistory.length) return rnd()
-
-        // Garde un peu d'imprévisibilité
-        if (Math.random() < 0.25) return rnd()
-
-        const recent = playerHistory.slice(-7)
-        const last   = recent[recent.length - 1]
-        const prev   = recent.length >= 2 ? recent[recent.length - 2] : null
-
-        // Pattern 1 : joueur répète le même coup → anticipe le changement
-        if (prev && last === prev) {
-          const likelySwitch = counterMove(last)
-          return Math.random() < 0.8 ? counterMove(likelySwitch) : rnd()
-        }
-
-        // Pattern 2 : casse les séries de victoires du joueur
-        if (playerWinStreak >= 2) {
-          return counterMove(last)
-        }
-
-        // Pattern 3 : fréquence des coups récents
-        const count = { rock: 0, paper: 0, scissors: 0 }
-        recent.forEach(m => { if (count[m] !== undefined) count[m]++ })
-        const mostFreq = Object.entries(count).sort((a, b) => b[1] - a[1])[0][0]
-        return Math.random() < 0.7 ? counterMove(mostFreq) : rnd()
-      }
-
-      return rnd()
-    }
+  return rnd()
+}
 
     // ============================================================
     //  RÉSULTAT DU ROUND
@@ -779,7 +776,7 @@
         await delay(1200)
 
         // FIX : getIAMove utilise difficulty depuis la variable globale
-        const iaMove = getIAMove(playerHistory)
+        const iaMove = getIAMove(playerHistory) || 'rock'
         showIAThinking(false)
         showIAMove(iaMove)
 
