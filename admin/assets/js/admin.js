@@ -656,6 +656,7 @@
               user_id: currentUser.id,
               username: 'admin',
               status:   'online',
+              role:     'admin', 
               since:    new Date().toISOString()
             })
             // Appliquer l'état initial UNE FOIS le track fait
