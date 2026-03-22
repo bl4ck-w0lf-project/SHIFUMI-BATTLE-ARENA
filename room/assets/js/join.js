@@ -307,41 +307,46 @@
   //  REJOINDRE LA SALLE
   // ============================================================
   async function joinRoom(room) {
-    const btn = document.getElementById('btn-confirm-join')
-    btn.disabled = true
-    btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-2"></i> Connexion...'
+  const btn = document.getElementById('btn-confirm-join')
+  btn.disabled = true
+  btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-2"></i> Connexion...'
 
-    try {
-      // Mettre à jour la salle avec guest_id
-      const { error } = await sb
-        .from('multiplayer_rooms')
-        .update({ guest_id: currentUser.id })
-        .eq('id', room.id)
-        .eq('status', 'waiting') // double vérif — pas encore lancée
+  try {
+    // 1. Mettre à jour la salle avec guest_id
+    const { error } = await sb
+      .from('multiplayer_rooms')
+      .update({ guest_id: currentUser.id })
+      .eq('id', room.id)
+      .eq('status', 'waiting')
 
-      if (error) throw error
+    if (error) throw error
 
-      // Mettre à jour présence
-      await presenceChannel.track({
-        user_id:  currentUser.id,
-        username: currentProfile?.username || '',
-        status:   'in_lobby',
-        since:    new Date().toISOString()
-      })
+    // 2. ★ Marquer l'invitation comme accepted pour notifier le host
+    await sb
+      .from('invitations')
+      .update({ status: 'accepted' })
+      .eq('room_id', room.id)
+      .eq('to_id', currentUser.id)
+      .eq('status', 'pending')
 
-      // Afficher écran d'attente
-      showWaitingScreen(room)
+    // 3. Présence
+    await presenceChannel.track({
+      user_id:  currentUser.id,
+      username: currentProfile?.username || '',
+      status:   'in_lobby',
+      since:    new Date().toISOString()
+    })
 
-      // Écouter le lancement de la partie
-      listenToRoom(room.id)
+    showWaitingScreen(room)
+    listenToRoom(room.id)
 
-    } catch (err) {
-      console.error('Erreur rejoindre salle:', err)
-      showError('Impossible de rejoindre — la salle est peut-être pleine')
-      btn.disabled = false
-      btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> ACCEPTER ET REJOINDRE'
-    }
+  } catch (err) {
+    console.error('Erreur rejoindre salle:', err)
+    showError('Impossible de rejoindre — la salle est peut-être pleine')
+    btn.disabled = false
+    btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> ACCEPTER ET REJOINDRE'
   }
+}
 
   // ============================================================
   //  ÉCRAN ATTENTE — J2 attend que J1 lance
