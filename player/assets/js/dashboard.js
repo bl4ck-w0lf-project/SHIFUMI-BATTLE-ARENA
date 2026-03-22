@@ -178,9 +178,9 @@
           <div class="font-orbitron font-bold text-2xl text-lose">${losses}</div>
           <div class="font-rajdhani text-xs uppercase dark:text-[#94a3b8] text-[#475569] mt-1">Défaites</div>
         </div>
-        <div class="text-center p-4 dark:bg-[rgba(239,68,68,0.08)] bg-[rgba(239,68,68,0.05)] rounded-xl border dark:border-[rgba(239,68,68,0.15)] border-[rgba(239,68,68,0.2)]">
-          <div class="font-orbitron font-bold text-2xl text-lose">${draws}</div>
-          <div class="font-rajdhani text-xs uppercase dark:text-[#94a3b8] text-[#475569] mt-1">Défaites</div>
+        <div class="text-center p-4 dark:bg-[rgba(245,158,11,0.1)] bg-[rgba(245,158,11,0.08)] rounded-xl border dark:border-[rgba(245,158,11,0.15)] border-[rgba(245,158,11,0.2)]">
+          <div class="font-orbitron font-bold text-2xl text-draw">${draws}</div>
+          <div class="font-rajdhani text-xs uppercase dark:text-[#94a3b8] text-[#475569] mt-1">Égalités</div>
         </div>
         <div class="text-center p-4 dark:bg-[rgba(168,85,247,0.08)] bg-[rgba(168,85,247,0.05)] rounded-xl border dark:border-[rgba(168,85,247,0.15)] border-[rgba(168,85,247,0.2)]">
           <div class="font-orbitron font-bold text-2xl text-[#a855f7]">${pvp.best_streak || 0}</div>
