@@ -1,45 +1,40 @@
 (function () {
 
-  // ============================================================
-  //  CONFIG SUPABASE
-  // ============================================================
   const SUPABASE_URL      = 'https://rblzhlykvssztahurebt.supabase.co'
   const SUPABASE_ANON_KEY = 'sb_publishable_b4cQt1irGiIGPnqxqJf_RQ_Jv_WO0wX'
   const { createClient } = supabase
   const sb       = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   const BASE_URL = window.location.origin
 
-  // ============================================================
-  //  ÉTAT
-  // ============================================================
-  let currentUser    = null
-  let currentProfile = null
-  let currentRoom    = null
-  let presenceChannel= null
-  let roomChannel    = null
+  let currentUser     = null
+  let currentProfile  = null
+  let currentRoom     = null
+  let presenceChannel = null
+  let roomChannel     = null
+  let pollTimer       = null
 
   // ============================================================
   //  INIT
   // ============================================================
   async function init() {
-    const { data: { session } } = await sb.auth.getSession()
+    // ★ FIX NAVIGATEUR : fermer tous les channels Supabase ouverts
+    // (hérités d'autres pages comme dashboard) avant d'en créer de nouveaux
+    try {
+      await sb.removeAllChannels()
+    } catch (e) { /* silencieux */ }
 
-    // Si pas connecté → rediriger vers connexion en gardant le code dans l'URL
+    const { data: { session } } = await sb.auth.getSession()
     if (!session) {
-      const params = new URLSearchParams(window.location.search)
-      const code   = params.get('code')
-      const redirect = code
-        ? `/room/join.html?code=${code}`
-        : '/room/join.html'
+      const params   = new URLSearchParams(window.location.search)
+      const code     = params.get('code')
+      const redirect = code ? `/room/join.html?code=${code}` : '/room/join.html'
       window.location.href = BASE_URL + '/player/connexion.html?redirect=' + encodeURIComponent(redirect)
       return
     }
 
     currentUser = session.user
-
-    // ★ FIX PAGE BLANCHE
-  document.body.style.visibility = 'visible'
-  document.body.style.opacity    = '1'
+    document.body.style.visibility = 'visible'
+    document.body.style.opacity    = '1'
 
     const { data: profile } = await sb
       .from('profiles')
@@ -60,12 +55,10 @@
       document.getElementById('nav-username').textContent = '@' + profile.username
     }
 
-    
+    initPresence()
     initLogout()
     initCodeInputs()
-    initPresence()
 
-    // Si code dans l'URL → pré-remplir et chercher automatiquement
     const urlParams = new URLSearchParams(window.location.search)
     const urlCode   = urlParams.get('code')
     if (urlCode) {
@@ -78,45 +71,10 @@
   //  PRESENCE
   // ============================================================
   function initPresence() {
-  presenceChannel = sb.channel('shifumi-presence', {
-    config: { presence: { key: currentUser.id } }
-  })
-
-  presenceChannel
-    .on('presence', { event: 'sync' }, () => {
-      // Sync global — s'assure que notre statut est bien propagé
-      // après une reconnexion ou un refresh
-      const state = presenceChannel.presenceState()
-      const me = state[currentUser.id]
-      if (!me) {
-        // On n'est pas dans l'état global → re-tracker
-        presenceChannel.track({
-          user_id:  currentUser.id,
-          username: currentProfile?.username || '',
-          status:   'online',
-          since:    new Date().toISOString()
-        })
-      }
+    presenceChannel = sb.channel('shifumi-presence', {
+      config: { presence: { key: currentUser.id } }
     })
-    .on('presence', { event: 'join' }, ({ newPresences }) => {
-      // Vérifier si c'est nous qui rejoignons après reconnexion
-      const isMe = newPresences.some(p => p.user_id === currentUser.id)
-      if (isMe) console.log('[PRESENCE] Re-connecté au channel')
-    })
-    .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-      // Si on détecte qu'on a quitté le channel (ex: perte réseau)
-      const isMe = leftPresences.some(p => p.user_id === currentUser.id)
-      if (isMe) {
-        // Re-tracker immédiatement
-        presenceChannel.track({
-          user_id:  currentUser.id,
-          username: currentProfile?.username || '',
-          status:   'online',
-          since:    new Date().toISOString()
-        })
-      }
-    })
-    .subscribe(async (status) => {
+    presenceChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await presenceChannel.track({
           user_id:  currentUser.id,
@@ -125,33 +83,23 @@
           since:    new Date().toISOString()
         })
       }
-      // Reconnexion après perte réseau
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.warn('[PRESENCE] Channel error — tentative reconnexion...')
-        setTimeout(() => presenceChannel.subscribe(), 2000)
-      }
     })
-}
+  }
 
   // ============================================================
-  //  INPUTS DU CODE — navigation auto + coller
+  //  INPUTS DU CODE
   // ============================================================
   function initCodeInputs() {
     const inputs = document.querySelectorAll('.code-input')
-
     inputs.forEach((input, i) => {
-      // Focus auto sur le premier
       if (i === 0) setTimeout(() => input.focus(), 100)
 
       input.addEventListener('input', (e) => {
         const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
         input.value = val ? val[val.length - 1] : ''
-
         if (input.value) {
           input.classList.add('filled')
-          // Passer au suivant
           if (i < inputs.length - 1) inputs[i + 1].focus()
-          // Si tous remplis → chercher automatiquement
           if (i === inputs.length - 1) autoSearch()
         } else {
           input.classList.remove('filled')
@@ -160,27 +108,21 @@
       })
 
       input.addEventListener('keydown', (e) => {
-        // Retour arrière → case précédente
         if (e.key === 'Backspace' && !input.value && i > 0) {
           inputs[i - 1].focus()
           inputs[i - 1].value = ''
           inputs[i - 1].classList.remove('filled')
         }
-        // Flèches
-        if (e.key === 'ArrowLeft'  && i > 0)               inputs[i - 1].focus()
+        if (e.key === 'ArrowLeft'  && i > 0)                inputs[i - 1].focus()
         if (e.key === 'ArrowRight' && i < inputs.length - 1) inputs[i + 1].focus()
       })
 
-      // Coller un code complet
       input.addEventListener('paste', (e) => {
         e.preventDefault()
         const pasted = (e.clipboardData.getData('text') || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-        if (pasted.length === 6) {
-          pasted.split('').forEach((char, j) => {
-            if (inputs[j]) {
-              inputs[j].value = char
-              inputs[j].classList.add('filled')
-            }
+        if (pasted.length >= 6) {
+          pasted.substring(0, 6).split('').forEach((char, j) => {
+            if (inputs[j]) { inputs[j].value = char; inputs[j].classList.add('filled') }
           })
           inputs[inputs.length - 1].focus()
           autoSearch()
@@ -188,7 +130,6 @@
       })
     })
 
-    // Bouton rejoindre
     document.getElementById('btn-join').addEventListener('click', async () => {
       const code = getCode()
       if (code.length < 6) { showError('Entre les 6 caractères du code'); return }
@@ -197,26 +138,20 @@
   }
 
   function getCode() {
-    return Array.from(document.querySelectorAll('.code-input'))
-      .map(i => i.value).join('')
+    return Array.from(document.querySelectorAll('.code-input')).map(i => i.value).join('')
   }
 
   function prefillCode(code) {
     const inputs  = document.querySelectorAll('.code-input')
     const cleaned = code.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6)
     cleaned.split('').forEach((char, i) => {
-      if (inputs[i]) {
-        inputs[i].value = char
-        inputs[i].classList.add('filled')
-      }
+      if (inputs[i]) { inputs[i].value = char; inputs[i].classList.add('filled') }
     })
   }
 
   async function autoSearch() {
     const code = getCode()
-    if (code.length === 6) {
-      await searchRoom(code)
-    }
+    if (code.length === 6) await searchRoom(code)
   }
 
   // ============================================================
@@ -245,7 +180,6 @@
         return
       }
 
-      // Vérifier que c'est pas sa propre salle
       if (room.host_id === currentUser.id) {
         showError('Tu ne peux pas rejoindre ta propre salle')
         btn.disabled = false
@@ -253,13 +187,20 @@
         return
       }
 
-      // Salle trouvée → afficher les infos
+      if (room.guest_id && room.guest_id !== currentUser.id) {
+        showError('Cette salle est déjà complète')
+        setInputsError()
+        btn.disabled = false
+        btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> REJOINDRE'
+        return
+      }
+
       currentRoom = room
       showRoomScreen(room)
 
     } catch (err) {
       console.error('Erreur recherche:', err)
-      showError('Une erreur est survenue')
+      showError('Une erreur est survenue, réessaie')
       btn.disabled = false
       btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> REJOINDRE'
     }
@@ -272,34 +213,29 @@
     document.getElementById('screen-code').classList.add('hidden')
     document.getElementById('screen-room').classList.remove('hidden')
 
-    const host = room.profiles
-    const hostName = host
-      ? `@${host.username} — ${host.first_name} ${host.last_name}`
-      : 'Hôte inconnu'
-
+    const host     = room.profiles
+    const hostName = host ? `@${host.username} — ${host.first_name} ${host.last_name}` : 'Hôte inconnu'
     document.getElementById('host-name').textContent   = hostName
     document.getElementById('room-rounds').textContent = room.total_rounds
 
-    // Bouton accepter
-    document.getElementById('btn-confirm-join').addEventListener('click', async () => {
-      await joinRoom(room)
-    })
+    // Clone boutons pour éviter doublons listeners
+    const btnConfirm = document.getElementById('btn-confirm-join')
+    const newConfirm = btnConfirm.cloneNode(true)
+    btnConfirm.parentNode.replaceChild(newConfirm, btnConfirm)
+    newConfirm.addEventListener('click', async () => await joinRoom(room))
 
-    // Bouton refuser
-    document.getElementById('btn-refuse-join').addEventListener('click', () => {
+    const btnRefuse = document.getElementById('btn-refuse-join')
+    const newRefuse = btnRefuse.cloneNode(true)
+    btnRefuse.parentNode.replaceChild(newRefuse, btnRefuse)
+    newRefuse.addEventListener('click', () => {
       document.getElementById('screen-room').classList.add('hidden')
       document.getElementById('screen-code').classList.remove('hidden')
       currentRoom = null
-      // Réactiver le bouton
       const btn = document.getElementById('btn-join')
       btn.disabled = false
       btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> REJOINDRE'
-      // Vider les inputs
-      document.querySelectorAll('.code-input').forEach(i => {
-        i.value = ''
-        i.classList.remove('filled', 'error')
-      })
-      document.querySelectorAll('.code-input')[0].focus()
+      document.querySelectorAll('.code-input').forEach(i => { i.value = ''; i.classList.remove('filled', 'error') })
+      setTimeout(() => document.querySelectorAll('.code-input')[0].focus(), 50)
     })
   }
 
@@ -307,160 +243,166 @@
   //  REJOINDRE LA SALLE
   // ============================================================
   async function joinRoom(room) {
-  const btn = document.getElementById('btn-confirm-join')
-  btn.disabled = true
-  btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-2"></i> Connexion...'
+    const btn = document.getElementById('btn-confirm-join')
+    btn.disabled = true
+    btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-2"></i> Connexion...'
 
-  try {
-    // 1. Mettre à jour la salle avec guest_id
-    const { error } = await sb
-      .from('multiplayer_rooms')
-      .update({ guest_id: currentUser.id })
-      .eq('id', room.id)
-      .eq('status', 'waiting')
+    try {
+      const { error } = await sb
+        .from('multiplayer_rooms')
+        .update({ guest_id: currentUser.id })
+        .eq('id', room.id)
+        .eq('status', 'waiting')
 
-    if (error) throw error
+      if (error) throw error
 
-    // 2. ★ Marquer l'invitation comme accepted pour notifier le host
-    await sb
-      .from('invitations')
-      .update({ status: 'accepted' })
-      .eq('room_id', room.id)
-      .eq('to_id', currentUser.id)
-      .eq('status', 'pending')
+      // Mettre à jour l'invitation si elle existe
+      await sb
+        .from('invitations')
+        .update({ status: 'accepted' })
+        .eq('room_id', room.id)
+        .eq('to_id', currentUser.id)
+        .eq('status', 'pending')
 
-    // 3. Présence
-    await presenceChannel.track({
-      user_id:  currentUser.id,
-      username: currentProfile?.username || '',
-      status:   'in_lobby',
-      since:    new Date().toISOString()
-    })
+      await presenceChannel.track({
+        user_id:  currentUser.id,
+        username: currentProfile?.username || '',
+        status:   'in_lobby',
+        since:    new Date().toISOString()
+      })
 
-    showWaitingScreen(room)
-    listenToRoom(room.id)
+      showWaitingScreen(room)
+      listenToRoom(room.id)
+      startPolling(room.id)
 
-  } catch (err) {
-    console.error('Erreur rejoindre salle:', err)
-    showError('Impossible de rejoindre — la salle est peut-être pleine')
-    btn.disabled = false
-    btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> ACCEPTER ET REJOINDRE'
+    } catch (err) {
+      console.error('Erreur rejoindre salle:', err)
+      showError('Impossible de rejoindre — la salle est peut-être pleine ou expirée')
+      btn.disabled = false
+      btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> ACCEPTER ET REJOINDRE'
+    }
   }
-}
 
   // ============================================================
-  //  ÉCRAN ATTENTE — J2 attend que J1 lance
+  //  ÉCRAN D'ATTENTE
   // ============================================================
   function showWaitingScreen(room) {
     document.getElementById('screen-room').classList.add('hidden')
     document.getElementById('screen-waiting').classList.remove('hidden')
 
-    // Afficher les initiales des deux joueurs
-    const host = room.profiles
-    const hostInitials = host
-      ? (host.first_name[0] + host.last_name[0]).toUpperCase()
-      : '?'
-    const myInitials = currentProfile
-      ? (currentProfile.first_name[0] + currentProfile.last_name[0]).toUpperCase()
-      : '?'
+    const host         = room.profiles
+    const hostInitials = host ? (host.first_name[0] + host.last_name[0]).toUpperCase() : '?'
+    const myInitials   = currentProfile
+      ? (currentProfile.first_name[0] + currentProfile.last_name[0]).toUpperCase() : '?'
 
-    document.getElementById('host-avatar-wait').textContent = hostInitials
+    document.getElementById('host-avatar-wait').textContent  = hostInitials
     document.getElementById('guest-avatar-wait').textContent = myInitials
-    document.getElementById('host-label-wait').textContent = host
-      ? `@${host.username}`
-      : 'Hôte'
+    document.getElementById('host-label-wait').textContent   = host ? `@${host.username}` : 'Hôte'
 
-    // Bouton quitter
-    document.getElementById('btn-leave-room').addEventListener('click', async () => {
+    const btnLeave    = document.getElementById('btn-leave-room')
+    const newBtnLeave = btnLeave.cloneNode(true)
+    btnLeave.parentNode.replaceChild(newBtnLeave, btnLeave)
+    newBtnLeave.addEventListener('click', async () => {
+      stopPolling()
       await leaveRoom(room.id)
       document.getElementById('screen-waiting').classList.add('hidden')
       document.getElementById('screen-code').classList.remove('hidden')
       currentRoom = null
-      document.querySelectorAll('.code-input').forEach(i => {
-        i.value = ''
-        i.classList.remove('filled', 'error')
-      })
-      document.querySelectorAll('.code-input')[0].focus()
+      document.querySelectorAll('.code-input').forEach(i => { i.value = ''; i.classList.remove('filled', 'error') })
+      setTimeout(() => document.querySelectorAll('.code-input')[0].focus(), 50)
     })
   }
 
   // ============================================================
-  //  ÉCOUTER LE LANCEMENT — Realtime
+  //  REALTIME — écouter le lancement
   // ============================================================
   function listenToRoom(roomId) {
-  roomChannel?.unsubscribe()
-  
-  roomChannel = sb.channel(`room-${roomId}`)
-    .on('postgres_changes', {
-      event:  'UPDATE',
-      schema: 'public',
-      table:  'multiplayer_rooms',
-      filter: `id=eq.${roomId}`
-    }, (payload) => {
-      const room = payload.new
-      console.log('[JOIN] Realtime update reçu:', room.status)
+    roomChannel?.unsubscribe()
+    roomChannel = sb.channel(`room-guest-${roomId}`)
+      .on('postgres_changes', {
+        event:  'UPDATE',
+        schema: 'public',
+        table:  'multiplayer_rooms',
+        filter: `id=eq.${roomId}`
+      }, (payload) => {
+        const room = payload.new
+        if (room.status === 'playing') { stopPolling(); goToGame(roomId) }
+        if (room.status === 'abandoned') {
+          stopPolling()
+          showToast('L\'hôte a annulé la salle', 'warning')
+          roomChannel?.unsubscribe()
+          setTimeout(() => {
+            document.getElementById('screen-waiting')?.classList.add('hidden')
+            document.getElementById('screen-code')?.classList.remove('hidden')
+            currentRoom = null
+          }, 2000)
+        }
+      })
+      .subscribe()
+  }
 
-      if (room.status === 'playing') {
-        goToGame(roomId)
-      }
-
-      if (room.status === 'abandoned') {
-        showToast('L\'hôte a annulé la salle', 'warning')
-        roomChannel?.unsubscribe()
-        setTimeout(() => {
-          document.getElementById('screen-waiting')?.classList.add('hidden')
-          document.getElementById('screen-code')?.classList.remove('hidden')
-          currentRoom = null
-        }, 2000)
-      }
-    })
-    .subscribe((status) => {
-      console.log('[JOIN] Channel status:', status)
-      if (status === 'SUBSCRIBED') {
-        // Vérifier si la partie a déjà été lancée pendant la souscription
-        sb.from('multiplayer_rooms')
+  // ============================================================
+  //  POLLING — toutes les 3s, source principale de vérité
+  // ============================================================
+  function startPolling(roomId) {
+    stopPolling()
+    pollTimer = setInterval(async () => {
+      try {
+        const { data: room } = await sb
+          .from('multiplayer_rooms')
           .select('status')
           .eq('id', roomId)
           .single()
-          .then(({ data: room }) => {
-            if (room?.status === 'playing') goToGame(roomId)
-          })
-      }
-    })
-}
+
+        if (room?.status === 'playing') {
+          stopPolling()
+          goToGame(roomId)
+        }
+        if (room?.status === 'abandoned') {
+          stopPolling()
+          showToast('L\'hôte a annulé la salle', 'warning')
+          setTimeout(() => {
+            document.getElementById('screen-waiting')?.classList.add('hidden')
+            document.getElementById('screen-code')?.classList.remove('hidden')
+            currentRoom = null
+          }, 2000)
+        }
+      } catch (e) { /* silencieux */ }
+    }, 3000)
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  }
 
   // ============================================================
   //  QUITTER LA SALLE
   // ============================================================
   async function leaveRoom(roomId) {
     try {
-      await sb.from('multiplayer_rooms')
-        .update({ guest_id: null })
-        .eq('id', roomId)
+      await sb.from('multiplayer_rooms').update({ guest_id: null }).eq('id', roomId)
       roomChannel?.unsubscribe()
-
       await presenceChannel.track({
         user_id:  currentUser.id,
         username: currentProfile?.username || '',
         status:   'online',
         since:    new Date().toISOString()
       })
-    } catch (err) {
-      console.error('Erreur quitter salle:', err)
-    }
+    } catch (err) { console.error('Erreur quitter salle:', err) }
   }
 
   // ============================================================
   //  ALLER À LA PARTIE
   // ============================================================
   function goToGame(roomId) {
+    stopPolling()
     presenceChannel?.track({
       user_id:  currentUser.id,
       username: currentProfile?.username || '',
       status:   'in_game',
       since:    new Date().toISOString()
     })
-    window.location.href = `https://shifumi-battle-arena.vercel.app/room/game_pvp.html?room=${roomId}`
+    window.location.href = `${BASE_URL}/room/game_pvp.html?room=${roomId}`
   }
 
   // ============================================================
@@ -485,10 +427,10 @@
   }
 
   function showToast(message, type = 'info') {
-    const existing = document.querySelector('.join-toast')
-    if (existing) existing.remove()
+    document.querySelector('.join-toast')?.remove()
     const toast = document.createElement('div')
     toast.className = 'join-toast fixed top-20 right-4 z-50 px-5 py-3 rounded-xl font-rajdhani font-semibold text-white shadow-xl'
+    toast.style.maxWidth = '320px'
     toast.textContent = message
     const colors = { warning:'#f59e0b', error:'#ef4444', success:'#22c55e', info:'#02b7f5' }
     toast.style.background = colors[type] || colors.info
@@ -496,9 +438,6 @@
     setTimeout(() => toast.remove(), 3500)
   }
 
-  // ============================================================
-  //  THÈME
-  // ============================================================
   function initTheme() {
     const html  = document.documentElement
     const icon  = document.getElementById('themeIcon')
@@ -514,15 +453,13 @@
     }
   }
 
-  // ============================================================
-  //  DÉCONNEXION
-  // ============================================================
   function initLogout() {
     const modal = document.getElementById('modal-logout')
     document.getElementById('btn-logout')?.addEventListener('click', () => modal.classList.remove('hidden'))
     document.getElementById('btn-logout-cancel')?.addEventListener('click', () => modal.classList.add('hidden'))
     modal?.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden') })
     document.getElementById('btn-logout-confirm')?.addEventListener('click', async () => {
+      stopPolling()
       if (currentRoom) await leaveRoom(currentRoom.id)
       presenceChannel?.untrack()
       await sb.auth.signOut()
@@ -530,9 +467,6 @@
     })
   }
 
-  // ============================================================
-  //  LANCEMENT
-  // ============================================================
   initTheme()
   init()
 
