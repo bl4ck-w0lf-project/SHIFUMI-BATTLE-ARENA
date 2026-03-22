@@ -1,26 +1,22 @@
 (function () {
 
-  // ============================================================
-  //  CONFIG SUPABASE
-  // ============================================================
   const SUPABASE_URL      = 'https://rblzhlykvssztahurebt.supabase.co'
   const SUPABASE_ANON_KEY = 'sb_publishable_b4cQt1irGiIGPnqxqJf_RQ_Jv_WO0wX'
   const { createClient } = supabase
   const sb       = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   const BASE_URL = window.location.origin
 
-  // ============================================================
-  //  ÉTAT
-  // ============================================================
-  let currentUser     = null
-  let currentProfile  = null
-  let currentRoom     = null
-  let totalRounds     = 5
-  let presenceChannel = null
-  let roomChannel     = null
-  let expiryTimer     = null
-  let onlinePlayers   = {}
-  let startPvpListenerAdded = false  // ← évite les doublons d'event listener
+  let currentUser           = null
+  let currentProfile        = null
+  let currentRoom           = null
+  let totalRounds           = 5
+  let presenceChannel       = null
+  let roomChannel           = null
+  let expiryTimer           = null
+  let pollTimer             = null
+  let onlinePlayers         = {}
+  let startPvpListenerAdded = false
+  let guestAlreadyJoined    = false
 
   // ============================================================
   //  INIT
@@ -32,8 +28,6 @@
       return
     }
     currentUser = session.user
-
-    // ★ FIX PAGE BLANCHE
     document.body.style.visibility = 'visible'
     document.body.style.opacity    = '1'
 
@@ -81,7 +75,6 @@
     presenceChannel = sb.channel('shifumi-presence', {
       config: { presence: { key: currentUser.id } }
     })
-
     presenceChannel
       .on('presence', { event: 'sync' }, () => {
         const state = presenceChannel.presenceState()
@@ -120,16 +113,15 @@
     const badge     = document.getElementById('online-badge')
     if (!container) return
 
-    const others = Object.values(onlinePlayers).filter(p => p.user_id !== currentUser.id && p.role !== 'admin')
+    const others = Object.values(onlinePlayers).filter(p =>
+      p.user_id !== currentUser.id && p.role !== 'admin'
+    )
     badge.textContent = others.length + ' en ligne'
 
     if (others.length === 0) {
       container.innerHTML = `
         <div class="flex flex-col items-center justify-center py-10 gap-3">
-          <div class="w-12 h-12 rounded-full dark:bg-[rgba(255,255,255,0.04)] bg-[rgba(0,0,0,0.04)]
-                      flex items-center justify-center">
-            <i class="fa-solid fa-user-slash dark:text-[#2a3a4a] text-[#cbd5e1] text-xl"></i>
-          </div>
+          <i class="fa-solid fa-user-slash dark:text-[#2a3a4a] text-[#cbd5e1] text-2xl"></i>
           <p class="font-rajdhani dark:text-[#475569] text-[#94a3b8] text-sm text-center">
             Aucun joueur en ligne<br>pour l'instant
           </p>
@@ -138,7 +130,6 @@
     }
 
     container.innerHTML = ''
-
     const order = { online: 0, in_lobby: 1, in_game: 2 }
     others.sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3))
 
@@ -150,18 +141,17 @@
       const initials  = player.username ? player.username.substring(0, 2).toUpperCase() : '??'
       const canInvite = currentRoom && !isInGame
 
-      const statusLabel   = isInGame ? 'En partie' : isInLobby ? 'Dans un lobby' : 'Disponible'
-      const statusColor   = isInGame ? 'text-primary' : isInLobby ? 'text-draw' : 'text-win'
-      const avatarGrad    = isOnline ? 'from-[#02b7f5] to-[#0066ff]'
-                          : isInLobby ? 'from-[#f59e0b] to-[#d97706]'
-                          : 'from-[#475569] to-[#334155]'
+      const statusLabel = isInGame ? 'En partie' : isInLobby ? 'Dans un lobby' : 'Disponible'
+      const statusColor = isInGame ? 'text-primary' : isInLobby ? 'text-draw' : 'text-win'
+      const avatarGrad  = isOnline  ? 'from-[#02b7f5] to-[#0066ff]'
+                        : isInLobby ? 'from-[#f59e0b] to-[#d97706]'
+                        : 'from-[#475569] to-[#334155]'
 
       const card = document.createElement('div')
       card.className = `flex items-center gap-3 p-3 rounded-xl transition-all
                         dark:bg-[rgba(255,255,255,0.03)] bg-[rgba(0,0,0,0.02)]
                         border dark:border-[rgba(255,255,255,0.06)] border-[rgba(0,0,0,0.06)]
-                        ${isInGame ? 'opacity-50' : 'hover:dark:bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(0,0,0,0.03)]'}`
-
+                        ${isInGame ? 'opacity-50' : ''}`
       card.innerHTML = `
         <div class="relative shrink-0">
           <div class="w-9 h-9 rounded-full bg-gradient-to-br ${avatarGrad}
@@ -179,13 +169,11 @@
         ${canInvite ? `
           <button onclick="window.invitePlayer('${player.user_id}', '${player.username}')"
             class="shrink-0 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#a855f7] to-[#7c3aed]
-                   text-white font-rajdhani font-bold text-xs hover:brightness-110 hover:scale-105 transition">
+                   text-white font-rajdhani font-bold text-xs hover:brightness-110 transition">
             <i class="fa-solid fa-paper-plane mr-1"></i> Inviter
           </button>`
         : isInGame ? `
-          <span class="shrink-0 font-rajdhani text-xs dark:text-[#475569] text-[#94a3b8] px-2">
-            En partie
-          </span>`
+          <span class="shrink-0 font-rajdhani text-xs dark:text-[#475569] text-[#94a3b8] px-2">En partie</span>`
         : !currentRoom ? `
           <span class="shrink-0 font-rajdhani text-xs dark:text-[#475569] text-[#94a3b8] px-2 text-right leading-tight">
             Crée une<br>salle d'abord
@@ -205,7 +193,6 @@
 
     try {
       const code = generateCode()
-
       const { data: room, error } = await sb
         .from('multiplayer_rooms')
         .insert({
@@ -220,8 +207,9 @@
         .single()
 
       if (error) throw error
-      currentRoom = room
+      currentRoom           = room
       startPvpListenerAdded = false
+      guestAlreadyJoined    = false
 
       await presenceChannel.track({
         user_id:  currentUser.id,
@@ -232,6 +220,7 @@
 
       showRoomScreen(room)
       listenToRoom(room.id)
+      startPolling(room.id)
       startExpiryCountdown(room.expires_at)
 
     } catch (err) {
@@ -249,7 +238,6 @@
     document.getElementById('screen-setup').classList.add('hidden')
     document.getElementById('screen-room').classList.remove('hidden')
 
-    // Code avec cases stylisées
     const codeDisplay = document.getElementById('room-code-display')
     codeDisplay.innerHTML = room.code.split('').map((char, i) => `
       <div class="code-char dark:bg-[rgba(2,183,245,0.1)] bg-[rgba(2,183,245,0.08)]
@@ -259,14 +247,12 @@
         ${char}
       </div>`).join('')
 
-    // Bouton copier le code
     document.getElementById('btn-copy-code').addEventListener('click', () => {
       navigator.clipboard.writeText(room.code)
       showToast('Code copié !', 'success')
     })
 
-    // URLs de partage — pointer vers join.html?code=
-    const joinUrl = `${BASE_URL}/room/join.html?code=${room.code}`
+    const joinUrl = `https://shifumi-battle-arena.vercel.app/room/join.html?code=${room.code}`
     const msg     = `Rejoins-moi sur Shifumi Battle Arena !\nCode : ${room.code}\n${joinUrl}`
 
     document.getElementById('btn-share-whatsapp').addEventListener('click', () => {
@@ -284,54 +270,60 @@
   }
 
   // ============================================================
-  //  ÉCOUTER LA SALLE — Realtime
+  //  REALTIME — backup si le polling rate quelque chose
   // ============================================================
   function listenToRoom(roomId) {
-  roomChannel = sb.channel(`room-${roomId}`)
-    .on('postgres_changes', {
-      event:  'UPDATE',
-      schema: 'public',
-      table:  'multiplayer_rooms',
-      filter: `id=eq.${roomId}`
-    }, async (payload) => {
-      const room = payload.new
-      console.log('[LOBBY] Realtime update reçu:', room.status, 'guest:', room.guest_id)
+    roomChannel?.unsubscribe()
+    roomChannel = sb.channel(`room-host-${roomId}`)
+      .on('postgres_changes', {
+        event:  'UPDATE',
+        schema: 'public',
+        table:  'multiplayer_rooms',
+        filter: `id=eq.${roomId}`
+      }, async (payload) => {
+        const room = payload.new
+        if (room.guest_id && !guestAlreadyJoined) {
+          guestAlreadyJoined = true
+          currentRoom = { ...currentRoom, ...room }
+          await onGuestJoined(room.guest_id)
+        }
+      })
+      .subscribe()
+  }
 
-      // Guest vient de rejoindre
-      if (room.guest_id && room.guest_id !== currentRoom?.guest_id) {
-        currentRoom = { ...currentRoom, ...room }
-        await onGuestJoined(room.guest_id)
-      }
-
-      // Partie lancée
-      if (room.status === 'playing' && currentRoom?.status !== 'playing') {
-        currentRoom = { ...currentRoom, ...room }
-        goToGame(roomId)
-      }
-    })
-    .subscribe((status) => {
-      console.log('[LOBBY] Channel status:', status)
-      if (status === 'SUBSCRIBED') {
-        // Vérifier immédiatement si quelqu'un a déjà rejoint
-        // pendant le délai de souscription
-        sb.from('multiplayer_rooms')
-          .select('*, profiles!host_id(first_name, last_name, username)')
+  // ============================================================
+  //  POLLING — toutes les 3s, source principale de vérité
+  // ============================================================
+  function startPolling(roomId) {
+    stopPolling()
+    pollTimer = setInterval(async () => {
+      if (!currentRoom || guestAlreadyJoined) { stopPolling(); return }
+      try {
+        const { data: room } = await sb
+          .from('multiplayer_rooms')
+          .select('guest_id, status')
           .eq('id', roomId)
           .single()
-          .then(({ data: room }) => {
-            if (room?.guest_id && room.guest_id !== currentRoom?.guest_id) {
-              currentRoom = { ...currentRoom, ...room }
-              onGuestJoined(room.guest_id)
-            }
-          })
-      }
-    })
-}
+
+        if (room?.guest_id && !guestAlreadyJoined) {
+          guestAlreadyJoined = true
+          currentRoom = { ...currentRoom, ...room }
+          await onGuestJoined(room.guest_id)
+        }
+      } catch (e) { /* silencieux */ }
+    }, 3000)
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  }
 
   // ============================================================
   //  GUEST A REJOINT
   // ============================================================
   async function onGuestJoined(guestId) {
+    stopPolling()
+
     const { data: guestProfile } = await sb
       .from('profiles')
       .select('first_name, last_name, username')
@@ -347,100 +339,51 @@
     document.getElementById('guest-name').textContent = name
 
     if (expiryTimer) clearInterval(expiryTimer)
-
     showToast(`${name} a rejoint ! Lance la partie 🎮`, 'success')
 
-    // Éviter les doublons de listener
     if (!startPvpListenerAdded) {
       startPvpListenerAdded = true
       document.getElementById('btn-start-pvp').addEventListener('click', async () => {
         const btn = document.getElementById('btn-start-pvp')
         btn.disabled = true
         btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-2"></i> Lancement...'
-
         await sb.from('multiplayer_rooms')
-          .update({
-            status:           'playing',
-            round_started_at: new Date().toISOString()
-          })
+          .update({ status: 'playing', round_started_at: new Date().toISOString() })
           .eq('id', currentRoom.id)
-
         goToGame(currentRoom.id)
       })
     }
   }
 
   // ============================================================
-  //  INVITER UN JOUEUR
+  //  INVITER UN JOUEUR — envoie juste l'invitation, pas de tracking
   // ============================================================
   window.invitePlayer = async function (toId, toUsername) {
-    if (!currentRoom) {
-      showToast('Crée une salle d\'abord !', 'warning')
-      return
-    }
-
+    if (!currentRoom) { showToast('Crée une salle d\'abord !', 'warning'); return }
     try {
-      // Vérifier si une invitation est déjà en cours pour cette salle
       const { data: existing } = await sb
         .from('invitations')
-        .select('id, status')
+        .select('id')
         .eq('room_id', currentRoom.id)
         .eq('to_id', toId)
         .eq('status', 'pending')
         .maybeSingle()
 
-      if (existing) {
-        showToast(`Invitation déjà envoyée à @${toUsername}`, 'info')
-        return
-      }
+      if (existing) { showToast(`Invitation déjà envoyée à @${toUsername}`, 'info'); return }
 
       await sb.from('invitations').insert({
         from_id: currentUser.id,
         to_id:   toId,
         room_id: currentRoom.id
       })
-
       showToast(`Invitation envoyée à @${toUsername} !`, 'success')
-      listenInvitationResponse(currentRoom.id, toUsername)
+      // Le polling détectera automatiquement quand le guest rejoint
 
     } catch (err) {
       console.error('Erreur invitation:', err)
       showToast('Erreur lors de l\'envoi de l\'invitation', 'error')
     }
   }
-
- function listenInvitationResponse(roomId, toUsername) {
-  const ch = sb.channel(`inv-response-${roomId}-${Date.now()}`)
-    .on('postgres_changes', {
-      event:  'UPDATE',
-      schema: 'public',
-      table:  'invitations',
-      filter: `room_id=eq.${roomId}`
-    }, async (payload) => {
-      const inv = payload.new
-      if (inv.status === 'declined') {
-        showToast(`@${toUsername} a refusé l'invitation`, 'warning')
-        ch.unsubscribe()
-      } else if (inv.status === 'accepted') {
-        showToast(`@${toUsername} a accepté !`, 'success')
-        ch.unsubscribe()
-        // Récupérer le guest_id depuis la salle
-        const { data: room } = await sb
-          .from('multiplayer_rooms')
-          .select('guest_id')
-          .eq('id', roomId)
-          .single()
-        if (room?.guest_id) {
-          currentRoom = { ...currentRoom, guest_id: room.guest_id }
-          await onGuestJoined(room.guest_id)
-        }
-      } else if (inv.status === 'expired') {
-        showToast(`Invitation à @${toUsername} expirée`, 'warning')
-        ch.unsubscribe()
-      }
-    })
-    .subscribe()
-}
 
   // ============================================================
   //  ANNULER LA SALLE
@@ -452,14 +395,15 @@
     document.getElementById('screen-setup').classList.remove('hidden')
     document.getElementById('btn-create-room').disabled = false
     document.getElementById('btn-create-room').innerHTML = '<i class="fa-solid fa-plus mr-2"></i> CRÉER LA SALLE'
-    // Reset état guest-arrived
     document.getElementById('guest-arrived').classList.add('hidden')
     document.getElementById('waiting-status').classList.remove('hidden')
     startPvpListenerAdded = false
+    guestAlreadyJoined    = false
   })
 
   async function cancelRoom() {
     if (!currentRoom) return
+    stopPolling()
     try {
       await sb.from('multiplayer_rooms')
         .update({ status: 'abandoned', expires_at: new Date().toISOString() })
@@ -467,34 +411,30 @@
       roomChannel?.unsubscribe()
       if (expiryTimer) clearInterval(expiryTimer)
       currentRoom = null
-
       await presenceChannel.track({
         user_id:  currentUser.id,
         username: currentProfile?.username || '',
         status:   'in_lobby',
         since:    new Date().toISOString()
       })
-    } catch (err) {
-      console.error('Erreur annulation:', err)
-    }
+    } catch (err) { console.error('Erreur annulation:', err) }
   }
 
   // ============================================================
-  //  COUNTDOWN EXPIRATION (15 min)
+  //  COUNTDOWN EXPIRATION
   // ============================================================
   function startExpiryCountdown(expiresAt) {
     const el = document.getElementById('expiry-countdown')
     if (!el) return
     if (expiryTimer) clearInterval(expiryTimer)
-
     expiryTimer = setInterval(async () => {
       const remaining = Math.max(0, new Date(expiresAt) - Date.now())
       const mins = Math.floor(remaining / 60000)
       const secs = Math.floor((remaining % 60000) / 1000)
       el.textContent = `${mins}:${secs.toString().padStart(2, '0')}`
-
       if (remaining <= 0) {
         clearInterval(expiryTimer)
+        stopPolling()
         showToast('La salle a expiré', 'warning')
         await cancelRoom()
         document.getElementById('screen-room').classList.add('hidden')
@@ -504,6 +444,7 @@
         document.getElementById('guest-arrived').classList.add('hidden')
         document.getElementById('waiting-status').classList.remove('hidden')
         startPvpListenerAdded = false
+        guestAlreadyJoined    = false
       }
     }, 1000)
   }
@@ -512,6 +453,7 @@
   //  ALLER À LA PARTIE
   // ============================================================
   function goToGame(roomId) {
+    stopPolling()
     presenceChannel?.track({
       user_id:  currentUser.id,
       username: currentProfile?.username || '',
@@ -527,9 +469,7 @@
   function generateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     let code = ''
-    for (let i = 0; i < 6; i++) {
-      code += chars[Math.floor(Math.random() * chars.length)]
-    }
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
     return code
   }
 
@@ -545,9 +485,6 @@
     setTimeout(() => toast.remove(), 3500)
   }
 
-  // ============================================================
-  //  THÈME
-  // ============================================================
   function initTheme() {
     const html  = document.documentElement
     const icon  = document.getElementById('themeIcon')
@@ -563,9 +500,6 @@
     }
   }
 
-  // ============================================================
-  //  DÉCONNEXION
-  // ============================================================
   function initLogout() {
     const modal = document.getElementById('modal-logout')
     document.getElementById('btn-logout')?.addEventListener('click', () => modal.classList.remove('hidden'))
@@ -579,9 +513,6 @@
     })
   }
 
-  // ============================================================
-  //  LANCEMENT
-  // ============================================================
   initTheme()
   init()
 
