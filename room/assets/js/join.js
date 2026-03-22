@@ -10,38 +10,27 @@
   let currentProfile  = null
   let presenceChannel = null
 
-  // ============================================================
-  //  INIT
-  // ============================================================
   async function init() {
-    // Fermer tous les channels hérités (dashboard etc.)
     try { await sb.removeAllChannels() } catch (e) {}
 
-    // Appliquer le thème avant de révéler la page
     applyTheme()
     document.body.style.visibility = 'visible'
     document.body.style.opacity    = '1'
 
-    // Vérifier si un code est dans l'URL
     const urlParams = new URLSearchParams(window.location.search)
     const urlCode   = urlParams.get('code')
 
-    if (!urlCode) {
-      showState('nocode')
-      return
-    }
+    if (!urlCode) { showState('nocode'); return }
 
-    // Vérifier la session
     const { data: { session } } = await sb.auth.getSession()
     if (!session) {
-      const redirect = `/room/join.html?code=${urlCode}`
+      const redirect = `https://shifumi-battle-arena.vercel.app/room/join.html?code=${urlCode}`
       window.location.href = BASE_URL + '/player/connexion.html?redirect=' + encodeURIComponent(redirect)
       return
     }
 
     currentUser = session.user
 
-    // Charger le profil
     const { data: profile } = await sb
       .from('profiles')
       .select('first_name, last_name, username, avatar_url')
@@ -49,7 +38,6 @@
       .single()
     if (profile) currentProfile = profile
 
-    // Initialiser présence
     presenceChannel = sb.channel('shifumi-presence', {
       config: { presence: { key: currentUser.id } }
     })
@@ -64,18 +52,13 @@
       }
     })
 
-    // Rejoindre directement
     await joinByCode(urlCode.toUpperCase())
   }
 
-  // ============================================================
-  //  REJOINDRE — cherche + update + redirect
-  // ============================================================
   async function joinByCode(code) {
     showState('loading')
 
     try {
-      // 1. Chercher la salle
       const { data: room, error } = await sb
         .from('multiplayer_rooms')
         .select('id, host_id, total_rounds, status, expires_at')
@@ -94,7 +77,6 @@
         return
       }
 
-      // 2. Update guest_id + status playing en une seule requête
       const { error: updateError } = await sb
         .from('multiplayer_rooms')
         .update({
@@ -103,11 +85,25 @@
           round_started_at: new Date().toISOString()
         })
         .eq('id', room.id)
-        .eq('status', 'waiting') // sécurité : évite double-join
+        .eq('status', 'waiting')
 
       if (updateError) throw updateError
 
-      // 3. Présence en in_game
+      // ★ Notifier le host via broadcast instantané
+      const notifyChannel = sb.channel(`notify-host-${room.id}`)
+      await new Promise(resolve => {
+        notifyChannel.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await notifyChannel.send({
+              type:    'broadcast',
+              event:   'guest_joined',
+              payload: { room_id: room.id }
+            })
+            resolve()
+          }
+        })
+      })
+
       await presenceChannel.track({
         user_id:  currentUser.id,
         username: currentProfile?.username || '',
@@ -115,10 +111,9 @@
         since:    new Date().toISOString()
       })
 
-      // 4. Afficher succès brièvement puis redirect
       showState('success')
       setTimeout(() => {
-        window.location.href = `${BASE_URL}/room/game_pvp.html?room=${room.id}`
+        window.location.href = `https://shifumi-battle-arena.vercel.app/room/game_pvp.html?room=${room.id}`
       }, 800)
 
     } catch (err) {
@@ -127,36 +122,23 @@
     }
   }
 
-  // ============================================================
-  //  GESTION DES ÉTATS VISUELS
-  // ============================================================
   function showState(state, errorMsg) {
-    document.getElementById('state-loading')?.classList.add('hidden')
-    document.getElementById('state-success')?.classList.add('hidden')
-    document.getElementById('state-error')?.classList.add('hidden')
-    document.getElementById('state-nocode')?.classList.add('hidden')
-
-    const el = document.getElementById(`state-${state}`)
-    if (el) el.classList.remove('hidden')
-
+    ['loading','success','error','nocode'].forEach(s => {
+      document.getElementById(`state-${s}`)?.classList.add('hidden')
+    })
+    document.getElementById(`state-${state}`)?.classList.remove('hidden')
     if (state === 'error' && errorMsg) {
-      const msgEl = document.getElementById('error-msg')
-      if (msgEl) msgEl.textContent = errorMsg
+      const el = document.getElementById('error-msg')
+      if (el) el.textContent = errorMsg
     }
   }
 
-  // ============================================================
-  //  THÈME
-  // ============================================================
   function applyTheme() {
     const saved = localStorage.getItem('theme') || 'dark'
     if (saved === 'light') document.documentElement.classList.remove('dark')
     else                   document.documentElement.classList.add('dark')
   }
 
-  // ============================================================
-  //  LANCEMENT
-  // ============================================================
   init()
 
 })()
