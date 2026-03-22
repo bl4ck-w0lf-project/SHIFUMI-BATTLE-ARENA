@@ -316,8 +316,10 @@
           }
         }
 
-        // ★ FIX — les deux ont joué ET les moves ne sont pas null (round frais)
-        if (data.host_move && data.guest_move && !processingResult) {
+        // ★ FIX — utiliser truthy check au lieu de && direct
+        // host_move et guest_move peuvent être undefined quand remis à null par Supabase
+        const bothPlayed = !!data.host_move && !!data.guest_move
+        if (bothPlayed && !processingResult) {
           processingResult = true
           stopPollResult()
           clearInterval(countdownInterval)
@@ -410,14 +412,16 @@
         startRound(newStart, data.countdown_seconds || 15)
       }
     } else {
-      // GUEST — attend que le HOST mette à jour la BDD
+      // GUEST — attend que le HOST mette à jour la BDD pour le prochain round
       await delay(2000)
-      updateRoundCounter(data.current_round + 1, data.total_rounds)
+
+      // Capturer le round actuel AVANT le setInterval pour la comparaison
+      const roundJustPlayed = data.current_round
 
       const waitNext = setInterval(async () => {
         const { data: next } = await sb
           .from('multiplayer_rooms')
-          .select('round_started_at, current_round, host_move, guest_move, status, countdown_seconds')
+          .select('round_started_at, current_round, host_move, guest_move, status, countdown_seconds, total_rounds')
           .eq('id', room.id)
           .single()
 
@@ -430,12 +434,16 @@
           return
         }
 
-        // ★ FIX — nouveau round détecté : current_round a changé ET les deux moves sont null
-        if (next.current_round > data.current_round && next.host_move === null && next.guest_move === null) {
+        // ★ FIX — utiliser !next.host_move au lieu de === null
+        // Supabase retourne undefined pour les champs remis à null, pas null
+        // On vérifie que current_round a bien changé ET les moves sont vides
+        const roundChanged  = next.current_round > roundJustPlayed
+        const movesAreEmpty = !next.host_move && !next.guest_move
+
+        if (roundChanged && movesAreEmpty && next.round_started_at) {
           clearInterval(waitNext)
-          // ★ FIX — mettre à jour expectedRound côté guest aussi
           expectedRound = next.current_round
-          updateRoundCounter(next.current_round + 1, data.total_rounds)
+          updateRoundCounter(next.current_round + 1, next.total_rounds)
           startRound(next.round_started_at, next.countdown_seconds || 15)
         }
       }, 1000)
