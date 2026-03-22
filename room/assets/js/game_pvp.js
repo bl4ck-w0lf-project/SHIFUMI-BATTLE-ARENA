@@ -1,37 +1,27 @@
 (function () {
 
-  // ============================================================
-  //  CONFIG SUPABASE
-  // ============================================================
   const SUPABASE_URL      = 'https://rblzhlykvssztahurebt.supabase.co'
   const SUPABASE_ANON_KEY = 'sb_publishable_b4cQt1irGiIGPnqxqJf_RQ_Jv_WO0wX'
   const { createClient } = supabase
   const sb       = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   const BASE_URL = window.location.origin
 
-  // ============================================================
-  //  ÉTAT GLOBAL
-  // ============================================================
-  let currentUser    = null
-  let currentProfile = null
-  let room           = null       // données de la salle
-  let isHost         = false      // true si je suis J1
-  let myMove         = null       // mon coup ce round
-  let roundChannel   = null       // channel Realtime salle
-  let presenceChannel= null       // channel Presence
-  let countdownInterval = null    // interval compte à rebours
-  let pingInterval   = null       // interval ping last_activity
-  let disconnectTimer= null       // timer déconnexion adversaire
-  let roundInProgress = false     // empêche double-clic
+  let currentUser       = null
+  let currentProfile    = null
+  let room              = null
+  let isHost            = false
+  let myMove            = null
+  let roundChannel      = null
+  let presenceChannel   = null
+  let countdownInterval = null
+  let disconnectTimer   = null
+  let roundInProgress   = false
+  let presenceReady     = false  // ★ évite faux disconnect au démarrage
 
-  // Scores locaux (mis à jour depuis la BDD)
-  let scoreMe  = 0
-  let scoreOpp = 0
+  let scoreMe   = 0
+  let scoreOpp  = 0
   let scoreDraw = 0
 
-  // ============================================================
-  //  MOVES
-  // ============================================================
   const MOVES = {
     rock:     { label: 'PIERRE',  beats: 'scissors' },
     paper:    { label: 'FEUILLE', beats: 'rock'     },
@@ -43,9 +33,9 @@
 
   function moveSVG(move, color) {
     if (move === 'timeout') return `<i class="fa-solid fa-hourglass-end" style="font-size:36px;color:${color}"></i>`
-    if (move === 'rock')     return `<svg width="48" height="48" viewBox="0 0 256 256" fill="${color}" class="reveal-move"><path d="M200,80H184V64a31.97943,31.97943,0,0,0-56-21.13208A31.97443,31.97443,0,0,0,72.20508,60.4231,31.978,31.978,0,0,0,24,88v40a104,104,0,0,0,208,0V112A32.03635,32.03635,0,0,0,200,80ZM152,48a16.01833,16.01833,0,0,1,16,16V80H136V64A16.01833,16.01833,0,0,1,152,48ZM88,64a16,16,0,0,1,32,0v40a16,16,0,0,1-32,0V64ZM40,88a16,16,0,0,1,32,0v16a16,16,0,0,1-32,0Zm88,128a88.10627,88.10627,0,0,1-87.9209-84.249A31.94065,31.94065,0,0,0,80,125.13208a31.92587,31.92587,0,0,0,44.58057,3.34595,32.23527,32.23527,0,0,0,11.79443,11.4414A47.906,47.906,0,0,0,120,176a8,8,0,0,0,16,0,32.03635,32.03635,0,0,1,32-32,8,8,0,0,0,0-16H152a16.01833,16.01833,0,0,1-16-16V96h64a16.01833,16.01833,0,0,1,16,16v16A88.09957,88.09957,0,0,1,128,216Z"/></svg>`
-    if (move === 'paper')    return `<svg width="48" height="48" viewBox="0 0 485 485" fill="${color}" class="reveal-move"><path d="M382.5,69.429c-7.441,0-14.5,1.646-20.852,4.573c-4.309-23.218-24.7-40.859-49.148-40.859c-7.68,0-14.958,1.744-21.467,4.852C285.641,16.205,265.932,0,242.5,0c-23.432,0-43.141,16.206-48.533,37.995c-6.508-3.107-13.787-4.852-21.467-4.852c-27.57,0-50,22.43-50,50v122.222c-6.129-2.686-12.891-4.187-20-4.187c-27.57,0-50,22.43-50,50V354c0,72.233,58.766,131,131,131h118c72.233,0,131-58.767,131-131V119.429C432.5,91.858,410.07,69.429,382.5,69.429z M402.5,354c0,55.691-45.309,101-101,101h-118c-55.691,0-101-45.309-101-101V251.178c0-11.028,8.972-20,20-20s20,8.972,20,20v80h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30V50c0-11.028,8.972-20,20-20c11.028,0,20,8.972,20,20v191.178h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30v-121.75c0-11.028,8.972-20,20-20s20,8.972,20,20V354z"/></svg>`
-    if (move === 'scissors') return `<svg width="48" height="48" viewBox="0 0 32 32" fill="${color}" class="reveal-move"><path d="${SCISSORS_PATH}"/></svg>`
+    if (move === 'rock')     return `<svg width="48" height="48" viewBox="0 0 256 256" fill="${color}"><path d="M200,80H184V64a31.97943,31.97943,0,0,0-56-21.13208A31.97443,31.97443,0,0,0,72.20508,60.4231,31.978,31.978,0,0,0,24,88v40a104,104,0,0,0,208,0V112A32.03635,32.03635,0,0,0,200,80ZM152,48a16.01833,16.01833,0,0,1,16,16V80H136V64A16.01833,16.01833,0,0,1,152,48ZM88,64a16,16,0,0,1,32,0v40a16,16,0,0,1-32,0V64ZM40,88a16,16,0,0,1,32,0v16a16,16,0,0,1-32,0Zm88,128a88.10627,88.10627,0,0,1-87.9209-84.249A31.94065,31.94065,0,0,0,80,125.13208a31.92587,31.92587,0,0,0,44.58057,3.34595,32.23527,32.23527,0,0,0,11.79443,11.4414A47.906,47.906,0,0,0,120,176a8,8,0,0,0,16,0,32.03635,32.03635,0,0,1,32-32,8,8,0,0,0,0-16H152a16.01833,16.01833,0,0,1-16-16V96h64a16.01833,16.01833,0,0,1,16,16v16A88.09957,88.09957,0,0,1,128,216Z"/></svg>`
+    if (move === 'paper')    return `<svg width="48" height="48" viewBox="0 0 485 485" fill="${color}"><path d="M382.5,69.429c-7.441,0-14.5,1.646-20.852,4.573c-4.309-23.218-24.7-40.859-49.148-40.859c-7.68,0-14.958,1.744-21.467,4.852C285.641,16.205,265.932,0,242.5,0c-23.432,0-43.141,16.206-48.533,37.995c-6.508-3.107-13.787-4.852-21.467-4.852c-27.57,0-50,22.43-50,50v122.222c-6.129-2.686-12.891-4.187-20-4.187c-27.57,0-50,22.43-50,50V354c0,72.233,58.766,131,131,131h118c72.233,0,131-58.767,131-131V119.429C432.5,91.858,410.07,69.429,382.5,69.429z M402.5,354c0,55.691-45.309,101-101,101h-118c-55.691,0-101-45.309-101-101V251.178c0-11.028,8.972-20,20-20s20,8.972,20,20v80h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30V50c0-11.028,8.972-20,20-20c11.028,0,20,8.972,20,20v191.178h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30v-121.75c0-11.028,8.972-20,20-20s20,8.972,20,20V354z"/></svg>`
+    if (move === 'scissors') return `<svg width="48" height="48" viewBox="0 0 32 32" fill="${color}"><path d="${SCISSORS_PATH}"/></svg>`
     return `<svg width="40" height="40" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="28" stroke="${color}" stroke-width="3" stroke-dasharray="6 6" fill="none"/><circle cx="40" cy="40" r="4" fill="${color}"/></svg>`
   }
 
@@ -57,7 +47,6 @@
     if (!session) { window.location.href = BASE_URL + '/player/connexion.html'; return }
     currentUser = session.user
 
-    // Récupérer le roomId depuis l'URL
     const roomId = new URLSearchParams(window.location.search).get('room')
     if (!roomId) { window.location.href = BASE_URL + '/room/lobby.html'; return }
 
@@ -80,10 +69,9 @@
       document.getElementById('nav-username').textContent = '@' + profile.username
     }
 
-    // Charger la salle
     const { data: roomData } = await sb
       .from('multiplayer_rooms')
-      .select('*, host:profiles!host_id(first_name, last_name, username), guest:profiles!guest_id(first_name, last_name, username)')
+      .select('*, host:profiles!host_id(first_name,last_name,username), guest:profiles!guest_id(first_name,last_name,username)')
       .eq('id', roomId)
       .single()
 
@@ -93,61 +81,67 @@
       return
     }
 
-    room    = roomData
-    isHost  = room.host_id === currentUser.id
+    room   = roomData
+    isHost = room.host_id === currentUser.id
 
-    // Afficher le code de la salle
     setEl('room-code-badge', room.code)
 
-    // Afficher le nom de l'adversaire
     const opponent = isHost ? room.guest : room.host
     const oppName  = opponent ? '@' + opponent.username : 'Adversaire'
-    setEl('opponent-label', oppName.substring(0, 6))
-    setEl('opp-label-move', oppName.substring(0, 6))
+    setEl('opponent-label', oppName.substring(0, 8))
+    setEl('opp-label-move', oppName.substring(0, 8))
 
-    // Construire les points de progression
     buildDots(room.total_rounds)
     updateRoundCounter(room.current_round + 1, room.total_rounds)
 
-    // Restaurer les scores actuels
-    if (isHost) {
-      scoreMe  = room.host_score  || 0
-      scoreOpp = room.guest_score || 0
-    } else {
-      scoreMe  = room.guest_score || 0
-      scoreOpp = room.host_score  || 0
-    }
+    if (isHost) { scoreMe = room.host_score || 0;  scoreOpp = room.guest_score || 0 }
+    else        { scoreMe = room.guest_score || 0; scoreOpp = room.host_score  || 0 }
     scoreDraw = room.draw_score || 0
     updateScoreUI()
-
-    // Marquer les dots déjà joués
     markPlayedDots(room.current_round)
 
     initTheme()
     initAbandon()
     initCardSelection()
-    initPresence()
+
+    // ★ Démarrer la présence — avec délai avant d'activer la vérification disconnect
+    await initPresence()
+
+    // ★ Écouter les changements de la salle
     listenToRoom(roomId)
 
-    // Si le round est déjà commencé (reconnexion)
-    if (room.round_started_at && room.current_round < room.total_rounds) {
-      startCountdown(room.round_started_at, room.countdown_seconds || 15)
+    // ★ Démarrer le countdown — si host, il initialise round_started_at
+    if (isHost) {
+      // Le host démarre le premier round
+      await sb.from('multiplayer_rooms')
+        .update({ round_started_at: new Date().toISOString() })
+        .eq('id', roomId)
+        .eq('current_round', 0) // seulement si pas encore commencé
+      startCountdown(new Date().toISOString(), room.countdown_seconds || 15)
+    } else {
+      // Le guest attend le round_started_at via Realtime
+      // Mais on démarre quand même avec la valeur actuelle si elle existe
+      if (room.round_started_at) {
+        startCountdown(room.round_started_at, room.countdown_seconds || 15)
+      }
     }
   }
 
   // ============================================================
-  //  PRESENCE — tracker statut in_game
+  //  PRESENCE
   // ============================================================
-  function initPresence() {
+  async function initPresence() {
     presenceChannel = sb.channel('shifumi-presence', {
       config: { presence: { key: currentUser.id } }
     })
+
     presenceChannel
       .on('presence', { event: 'sync' }, () => {
-  // Ne pas vérifier immédiatement — laisser le temps aux deux joueurs de tracker
-  setTimeout(() => checkOpponentPresence(), 3000)
-})
+        // ★ Ne vérifier la présence qu'après que les deux aient eu le temps de tracker
+        if (presenceReady) checkOpponentPresence()
+      })
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+        if (!presenceReady) return
         const oppId = isHost ? room.guest_id : room.host_id
         if (leftPresences.some(p => p.user_id === oppId)) {
           handleOpponentDisconnect()
@@ -167,28 +161,32 @@
             status:   'in_game',
             since:    new Date().toISOString()
           })
+          // ★ Attendre 5s avant d'activer la détection de disconnect
+          // pour laisser le temps aux deux joueurs de tracker leur présence
+          setTimeout(() => { presenceReady = true }, 5000)
         }
       })
   }
 
   function checkOpponentPresence() {
+    if (!presenceReady) return
     const oppId = isHost ? room.guest_id : room.host_id
     const state = presenceChannel.presenceState()
     const oppOnline = Object.values(state).some(presences =>
-      presences.some(p => p.user_id === oppId)
+      presences.some(p => p.user_id === oppId && p.status === 'in_game')
     )
     if (!oppOnline) handleOpponentDisconnect()
     else            handleOpponentReconnect()
   }
 
   // ============================================================
-  //  GESTION DÉCONNEXION ADVERSAIRE
+  //  DÉCONNEXION ADVERSAIRE
   // ============================================================
   let disconnectCountdown = 30
 
   function handleOpponentDisconnect() {
-    if (disconnectTimer) return // déjà en cours
-    document.getElementById('disconnect-warning').classList.remove('hidden')
+    if (disconnectTimer) return
+    document.getElementById('disconnect-warning')?.classList.remove('hidden')
     disconnectCountdown = 30
 
     disconnectTimer = setInterval(async () => {
@@ -197,7 +195,6 @@
       if (disconnectCountdown <= 0) {
         clearInterval(disconnectTimer)
         disconnectTimer = null
-        // Adversaire absent depuis 30s → partie abandonnée, je gagne
         await finishGame(isHost ? 'host' : 'guest')
       }
     }, 1000)
@@ -207,11 +204,9 @@
     if (!disconnectTimer) return
     clearInterval(disconnectTimer)
     disconnectTimer = null
-    document.getElementById('disconnect-warning').classList.add('hidden')
+    document.getElementById('disconnect-warning')?.classList.add('hidden')
     showToast('Adversaire reconnecté !', 'success')
   }
-
-  
 
   // ============================================================
   //  REALTIME — écouter les changements de la salle
@@ -227,29 +222,31 @@
         const updated = payload.new
         room = updated
 
-        // Détecter si l'adversaire a joué
-        const oppMove = isHost ? updated.guest_move : updated.host_move
-        const myMoveInDb = isHost ? updated.host_move : updated.guest_move
-
-        if (oppMove && oppMove !== 'waiting') {
-          setEl('opp-status', oppMove === 'timeout' ? '⏰ Timeout' : '✓ A joué')
-          document.getElementById('opp-status').classList.remove('dark:text-[#475569]','text-[#94a3b8]')
-          document.getElementById('opp-status').classList.add('text-win')
+        // ★ Guest : démarrer le countdown quand host set round_started_at
+        if (!isHost && updated.round_started_at && !roundInProgress) {
+          startCountdown(updated.round_started_at, updated.countdown_seconds || 15)
         }
 
-        // Les deux ont joué → calculer le résultat
-        const hostMove  = updated.host_move
-        const guestMove = updated.guest_move
+        const oppMove    = isHost ? updated.guest_move : updated.host_move
+        const hostMove   = updated.host_move
+        const guestMove  = updated.guest_move
+
+        if (oppMove && oppMove !== 'waiting' && oppMove !== null) {
+          setEl('opp-status', oppMove === 'timeout' ? '⏰ Timeout' : '✓ A joué')
+          const oppStatusEl = document.getElementById('opp-status')
+          if (oppStatusEl) {
+            oppStatusEl.classList.remove('dark:text-[#475569]','text-[#94a3b8]')
+            oppStatusEl.classList.add('text-win')
+          }
+        }
 
         if (hostMove && guestMove &&
             hostMove !== 'waiting' && guestMove !== 'waiting') {
           await processRoundResult(updated)
         }
 
-        // Partie terminée
         if (updated.status === 'finished' || updated.status === 'abandoned') {
           clearInterval(countdownInterval)
-          clearInterval(pingInterval)
           showFinalResult(updated)
         }
       })
@@ -262,22 +259,17 @@
   function initCardSelection() {
     document.querySelectorAll('.choice-card').forEach(card => {
       card.addEventListener('click', async function () {
-        if (roundInProgress || myMove) return
+        if (roundInProgress === false || myMove) return
 
-        // Sélectionner visuellement
         document.querySelectorAll('.choice-card').forEach(c => c.classList.remove('selected'))
         this.classList.add('selected')
         myMove = this.dataset.move
 
-        // Confirmer le statut
         document.getElementById('my-status').classList.remove('hidden')
         setEl('my-move-label', MOVES[myMove]?.label || myMove)
         document.getElementById('my-move-display').innerHTML = moveSVG(myMove, '#02b7f5')
-
-        // Désactiver les cartes
         document.querySelectorAll('.choice-card').forEach(c => c.classList.add('disabled'))
 
-        // Sauvegarder en base
         const moveCol = isHost ? 'host_move' : 'guest_move'
         await sb.from('multiplayer_rooms')
           .update({ [moveCol]: myMove })
@@ -287,60 +279,53 @@
   }
 
   // ============================================================
-  //  COMPTE À REBOURS — basé sur round_started_at en BDD
-  //  Les deux joueurs voient EXACTEMENT le même countdown
+  //  COUNTDOWN
   // ============================================================
   function startCountdown(roundStartedAt, totalSeconds) {
     clearInterval(countdownInterval)
     roundInProgress = true
     myMove = null
 
-    // Reset UI
     document.querySelectorAll('.choice-card').forEach(c => {
       c.classList.remove('selected', 'disabled')
-      c.querySelector('.check-icon')?.classList.add('hidden')
     })
-    document.getElementById('my-status').classList.add('hidden')
-    document.getElementById('my-move-display').innerHTML = moveSVG(null, '#02b7f5')
-    document.getElementById('my-move-label').textContent = '—'
+    document.getElementById('my-status')?.classList.add('hidden')
+    document.getElementById('my-move-display').innerHTML  = moveSVG(null, '#02b7f5')
+    document.getElementById('my-move-label').textContent  = '—'
     document.getElementById('opp-move-display').innerHTML = moveSVG(null, '#a855f7')
     document.getElementById('opp-move-label').textContent = '—'
     setEl('opp-status', 'En attente…')
-    document.getElementById('opp-status').className = 'font-rajdhani text-[10px] dark:text-[#475569] text-[#94a3b8] mt-1'
+    const oppStatusEl = document.getElementById('opp-status')
+    if (oppStatusEl) oppStatusEl.className = 'font-rajdhani text-[10px] dark:text-[#475569] text-[#94a3b8] mt-1'
 
     const CIRCUMFERENCE = 276.46
-    const ring  = document.getElementById('countdown-ring')
-    const num   = document.getElementById('countdown-number')
-    const bar   = document.getElementById('countdown-bar')
+    const ring = document.getElementById('countdown-ring')
+    const num  = document.getElementById('countdown-number')
+    const bar  = document.getElementById('countdown-bar')
 
     countdownInterval = setInterval(() => {
       const elapsed   = (Date.now() - new Date(roundStartedAt).getTime()) / 1000
       const remaining = Math.max(0, totalSeconds - Math.floor(elapsed))
       const pct       = remaining / totalSeconds
 
-      // Mise à jour visuelle
-      num.textContent = remaining
-      ring.style.strokeDashoffset = CIRCUMFERENCE * (1 - pct)
-      bar.style.width = (pct * 100) + '%'
+      if (num) num.textContent = remaining
+      if (ring) ring.style.strokeDashoffset = CIRCUMFERENCE * (1 - pct)
+      if (bar)  bar.style.width = (pct * 100) + '%'
 
-      // Couleurs d'urgence
       if (remaining <= 5) {
-        num.className = 'font-orbitron font-black text-3xl countdown-danger'
-        ring.style.stroke = '#ef4444'
-        bar.classList.add('bar-danger')
+        if (num) num.className = 'font-orbitron font-black text-3xl countdown-danger'
+        if (ring) ring.style.stroke = '#ef4444'
+        if (bar)  bar.classList.add('bar-danger')
       } else if (remaining <= 10) {
-        num.className = 'font-orbitron font-black text-3xl text-draw'
-        ring.style.stroke = '#f59e0b'
-        bar.classList.remove('bar-danger')
-        bar.style.background = '#f59e0b'
+        if (num) num.className = 'font-orbitron font-black text-3xl text-draw'
+        if (ring) ring.style.stroke = '#f59e0b'
+        if (bar)  { bar.classList.remove('bar-danger'); bar.style.background = '#f59e0b' }
       } else {
-        num.className = 'font-orbitron font-black text-3xl text-primary'
-        ring.style.stroke = '#02b7f5'
-        bar.classList.remove('bar-danger')
-        bar.style.background = '#02b7f5'
+        if (num) num.className = 'font-orbitron font-black text-3xl text-primary'
+        if (ring) ring.style.stroke = '#02b7f5'
+        if (bar)  { bar.classList.remove('bar-danger'); bar.style.background = '#02b7f5' }
       }
 
-      // Timeout — n'ai pas joué
       if (remaining <= 0) {
         clearInterval(countdownInterval)
         if (!myMove) handleTimeout()
@@ -349,16 +334,14 @@
   }
 
   // ============================================================
-  //  TIMEOUT — le joueur n'a pas joué à temps
+  //  TIMEOUT
   // ============================================================
   async function handleTimeout() {
     if (myMove) return
     myMove = 'timeout'
-
     document.querySelectorAll('.choice-card').forEach(c => c.classList.add('disabled'))
-    document.getElementById('my-move-label').textContent = 'TIMEOUT'
+    setEl('my-move-label', 'TIMEOUT')
     document.getElementById('my-move-display').innerHTML = moveSVG('timeout', '#ef4444')
-
     const moveCol = isHost ? 'host_move' : 'guest_move'
     await sb.from('multiplayer_rooms')
       .update({ [moveCol]: 'timeout' })
@@ -366,7 +349,7 @@
   }
 
   // ============================================================
-  //  CALCUL RÉSULTAT DU ROUND
+  //  RÉSULTAT DU ROUND
   // ============================================================
   async function processRoundResult(updatedRoom) {
     clearInterval(countdownInterval)
@@ -377,68 +360,55 @@
     const myMoveNow  = isHost ? hostMove  : guestMove
     const oppMoveNow = isHost ? guestMove : hostMove
 
-    // Afficher les coups
-    document.getElementById('my-move-display').innerHTML  = moveSVG(myMoveNow, '#02b7f5')
+    document.getElementById('my-move-display').innerHTML  = moveSVG(myMoveNow,  '#02b7f5')
     document.getElementById('opp-move-display').innerHTML = moveSVG(oppMoveNow, '#a855f7')
     setEl('my-move-label',  MOVES[myMoveNow]?.label  || myMoveNow)
     setEl('opp-move-label', MOVES[oppMoveNow]?.label || oppMoveNow)
 
-    // Résultat du point de vue de l'hôte
     const resultHost = getRoundResult(hostMove, guestMove)
-    const myResult = isHost
+    const myResult   = isHost
       ? resultHost
       : (resultHost === 'win' ? 'loss' : resultHost === 'loss' ? 'win' : 'draw')
 
-    // Mettre à jour les scores locaux
-    if (myResult === 'win')  scoreMe++
+    if (myResult === 'win')       scoreMe++
     else if (myResult === 'loss') scoreOpp++
-    else                         scoreDraw++
+    else                          scoreDraw++
     updateScoreUI()
 
-    // Marquer le dot
     const dotIndex = updatedRoom.current_round - 1
     markDot(dotIndex >= 0 ? dotIndex : 0, myResult)
 
-    // Afficher le résultat du round
     await delay(400)
     showRoundBanner(myResult, myMoveNow, oppMoveNow)
 
-    // Si c'est l'hôte → il met à jour la BDD pour le prochain round
     if (isHost) {
       await delay(2000)
-
-      const nextRound = updatedRoom.current_round + 1
+      const nextRound  = updatedRoom.current_round + 1
       const hostScore  = isHost ? scoreMe : scoreOpp
       const guestScore = isHost ? scoreOpp : scoreMe
 
-      // Vérifier si la partie est finie
       if (nextRound >= updatedRoom.total_rounds) {
         await finishGame(null, hostScore, guestScore)
       } else {
-        // Préparer le prochain round
+        const newStart = new Date().toISOString()
         await sb.from('multiplayer_rooms').update({
           current_round:    nextRound,
           host_move:        null,
           guest_move:       null,
-          round_started_at: new Date().toISOString(),
+          round_started_at: newStart,
           host_score:       hostScore,
           guest_score:      guestScore,
           draw_score:       scoreDraw,
         }).eq('id', updatedRoom.id)
 
         updateRoundCounter(nextRound + 1, updatedRoom.total_rounds)
-        startCountdown(new Date().toISOString(), updatedRoom.countdown_seconds || 15)
+        startCountdown(newStart, updatedRoom.countdown_seconds || 15)
       }
     } else {
-      // J2 attend que J1 mette à jour la BDD
-      // Le Realtime va déclencher le prochain round automatiquement
       updateRoundCounter(updatedRoom.current_round + 1, updatedRoom.total_rounds)
     }
   }
 
-  // ============================================================
-  //  LOGIQUE DE RÉSULTAT
-  // ============================================================
   function getRoundResult(hostMove, guestMove) {
     if (hostMove === 'timeout' && guestMove === 'timeout') return 'draw'
     if (hostMove === 'timeout')  return 'loss'
@@ -452,17 +422,15 @@
   // ============================================================
   async function finishGame(forcedWinner = null, hostScore = null, guestScore = null) {
     clearInterval(countdownInterval)
-    clearInterval(pingInterval)
 
     const hScore = hostScore  ?? (isHost ? scoreMe : scoreOpp)
     const gScore = guestScore ?? (isHost ? scoreOpp : scoreMe)
 
     let winner_id = null
-    if (forcedWinner === 'host')   winner_id = room.host_id
+    if (forcedWinner === 'host')       winner_id = room.host_id
     else if (forcedWinner === 'guest') winner_id = room.guest_id
-    else if (hScore > gScore) winner_id = room.host_id
-    else if (gScore > hScore) winner_id = room.guest_id
-    // null = draw
+    else if (hScore > gScore)          winner_id = room.host_id
+    else if (gScore > hScore)          winner_id = room.guest_id
 
     await sb.from('multiplayer_rooms').update({
       status:      'finished',
@@ -478,43 +446,38 @@
   // ============================================================
   function showFinalResult(updatedRoom) {
     clearInterval(countdownInterval)
-    clearInterval(pingInterval)
     presenceChannel?.track({
       user_id: currentUser.id, username: currentProfile?.username || '',
       status: 'online', since: new Date().toISOString()
     })
 
-    const hScore = updatedRoom.host_score  || 0
-    const gScore = updatedRoom.guest_score || 0
+    const hScore   = updatedRoom.host_score  || 0
+    const gScore   = updatedRoom.guest_score || 0
     const myScore  = isHost ? hScore : gScore
     const oppScore = isHost ? gScore : hScore
 
     let outcome, title, sub
     if (!updatedRoom.winner_id) {
-      outcome = 'draw'
-      title   = 'MATCH NUL !'
-      sub     = `${myScore} victoires chacun sur ${updatedRoom.total_rounds} rounds`
+      outcome = 'draw'; title = 'MATCH NUL !'
+      sub = `${myScore} victoires chacun sur ${updatedRoom.total_rounds} rounds`
     } else if (updatedRoom.winner_id === currentUser.id) {
-      outcome = 'win'
-      title   = 'VICTOIRE !'
-      sub     = `Tu mènes ${myScore} - ${oppScore} sur ${updatedRoom.total_rounds} rounds !`
+      outcome = 'win'; title = 'VICTOIRE !'
+      sub = `Tu mènes ${myScore} - ${oppScore} sur ${updatedRoom.total_rounds} rounds !`
     } else {
-      outcome = 'loss'
-      title   = 'DÉFAITE !'
-      sub     = `Ton adversaire mène ${oppScore} - ${myScore}...`
+      outcome = 'loss'; title = 'DÉFAITE !'
+      sub = `Ton adversaire mène ${oppScore} - ${myScore}...`
     }
 
     const cfg = {
-      win:  { bg:'rgba(0,30,10,0.75)',  border:'#22c55e', color:'#4ade80', icon:'fa-trophy',    grad:'linear-gradient(135deg,rgba(20,83,45,0.95),rgba(10,15,30,0.98))', btn:'#16a34a' },
+      win:  { bg:'rgba(0,30,10,0.75)',  border:'#22c55e', color:'#4ade80', icon:'fa-trophy',           grad:'linear-gradient(135deg,rgba(20,83,45,0.95),rgba(10,15,30,0.98))', btn:'#16a34a' },
       loss: { bg:'rgba(30,0,0,0.75)',   border:'#ef4444', color:'#f87171', icon:'fa-skull-crossbones', grad:'linear-gradient(135deg,rgba(127,29,29,0.95),rgba(10,15,30,0.98))', btn:'#dc2626' },
-      draw: { bg:'rgba(10,15,30,0.75)', border:'#94a3b8', color:'#e2e8f0', icon:'fa-handshake', grad:'linear-gradient(135deg,rgba(30,41,59,0.95),rgba(10,15,30,0.98))', btn:'#475569' },
+      draw: { bg:'rgba(10,15,30,0.75)', border:'#94a3b8', color:'#e2e8f0', icon:'fa-handshake',        grad:'linear-gradient(135deg,rgba(30,41,59,0.95),rgba(10,15,30,0.98))', btn:'#475569' },
     }[outcome]
 
     const overlay = document.createElement('div')
-    overlay.style.cssText = `position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);background:${cfg.bg};animation:overlayFadeIn 0.4s ease forwards;`
-
+    overlay.style.cssText = `position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);background:${cfg.bg};`
     const box = document.createElement('div')
-    box.style.cssText = `background:${cfg.grad};border:2px solid ${cfg.border};border-radius:24px;padding:48px 32px;max-width:400px;width:90%;text-align:center;box-shadow:0 0 80px ${cfg.border}55;animation:cardIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;`
+    box.style.cssText = `background:${cfg.grad};border:2px solid ${cfg.border};border-radius:24px;padding:48px 32px;max-width:400px;width:90%;text-align:center;box-shadow:0 0 80px ${cfg.border}55;`
     box.innerHTML = `
       <i class="fa-solid ${cfg.icon}" style="font-size:56px;color:${cfg.color};margin-bottom:20px;display:block;"></i>
       <div style="font-family:'Orbitron',sans-serif;font-size:26px;font-weight:900;color:${cfg.color};letter-spacing:2px;margin-bottom:10px;">${title}</div>
@@ -525,16 +488,10 @@
         <span style="color:#ef4444;">${oppScore}V ADV</span>
       </div>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-        <button id="btn-play-again"
-          style="background:linear-gradient(to right,${cfg.btn},${cfg.btn}cc);color:white;border:none;
-                 padding:14px 28px;border-radius:999px;font-family:'Orbitron',sans-serif;font-size:13px;
-                 font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
+        <button id="btn-play-again" style="background:linear-gradient(to right,${cfg.btn},${cfg.btn}cc);color:white;border:none;padding:14px 28px;border-radius:999px;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
           <i class="fa-solid fa-rotate-right"></i> REJOUER
         </button>
-        <button id="btn-go-dashboard"
-          style="background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.3);
-                 padding:14px 28px;border-radius:999px;font-family:'Rajdhani',sans-serif;font-size:14px;
-                 font-weight:600;cursor:pointer;">
+        <button id="btn-go-dashboard" style="background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.3);padding:14px 28px;border-radius:999px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">
           <i class="fa-solid fa-house mr-1"></i> Dashboard
         </button>
       </div>
@@ -551,19 +508,19 @@
   }
 
   // ============================================================
-  //  BANNER RÉSULTAT ROUND
+  //  BANNER ROUND
   // ============================================================
   function showRoundBanner(result, myMove, oppMove) {
     const cfg = {
-      win:  { bg:'rgba(0,25,8,0.75)',  border:'#22c55e', color:'#4ade80', icon:'fa-trophy',    label:'TU GAGNES CE ROUND !' },
-      loss: { bg:'rgba(30,0,0,0.75)',  border:'#ef4444', color:'#f87171', icon:'fa-skull',     label:'ROUND PERDU !' },
-      draw: { bg:'rgba(10,15,30,0.75)',border:'#64748b', color:'#94a3b8', icon:'fa-handshake', label:'ROUND NUL !' },
+      win:  { bg:'rgba(0,25,8,0.75)',   border:'#22c55e', color:'#4ade80', icon:'fa-trophy',    label:'TU GAGNES CE ROUND !' },
+      loss: { bg:'rgba(30,0,0,0.75)',   border:'#ef4444', color:'#f87171', icon:'fa-skull',     label:'ROUND PERDU !'        },
+      draw: { bg:'rgba(10,15,30,0.75)', border:'#64748b', color:'#94a3b8', icon:'fa-handshake', label:'ROUND NUL !'          },
     }[result]
 
     const overlay = document.createElement('div')
-    overlay.style.cssText = `position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);background:${cfg.bg};animation:overlayFadeIn 0.35s ease forwards;`
+    overlay.style.cssText = `position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);background:${cfg.bg};`
     const card = document.createElement('div')
-    card.style.cssText = `border:2px solid ${cfg.border};border-radius:24px;padding:36px 44px;max-width:360px;width:90%;text-align:center;background:rgba(10,15,30,0.92);box-shadow:0 0 60px ${cfg.border}44;animation:cardIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275) forwards;`
+    card.style.cssText = `border:2px solid ${cfg.border};border-radius:24px;padding:36px 44px;max-width:360px;width:90%;text-align:center;background:rgba(10,15,30,0.92);`
     card.innerHTML = `
       <i class="fa-solid ${cfg.icon}" style="font-size:44px;color:${cfg.color};margin-bottom:12px;display:block;"></i>
       <div style="font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;color:${cfg.color};letter-spacing:2px;">${cfg.label}</div>
@@ -575,31 +532,26 @@
     `
     overlay.appendChild(card)
     document.body.appendChild(overlay)
-
-    setTimeout(() => {
-      overlay.style.animation = 'overlayFadeOut 0.35s ease forwards'
-      card.style.animation    = 'cardOut 0.3s ease forwards'
-      setTimeout(() => overlay.remove(), 360)
-    }, 1800)
+    setTimeout(() => overlay.remove(), 1800)
   }
 
   // ============================================================
   //  ABANDON
   // ============================================================
   function initAbandon() {
-  const modal = document.getElementById('modal-abandon')
-  document.getElementById('btn-abandon').addEventListener('click', () => modal.classList.remove('hidden'))
-  document.getElementById('btn-abandon-cancel').addEventListener('click', () => modal.classList.add('hidden'))
-  document.getElementById('btn-abandon-confirm').addEventListener('click', async () => {
-    modal.classList.add('hidden')
-    const winner = isHost ? 'guest' : 'host'
-    await finishGame(winner)
-    window.location.href = BASE_URL + '/player/dashboard.html'
-  })
-}
+    const modal = document.getElementById('modal-abandon')
+    document.getElementById('btn-abandon').addEventListener('click', () => modal.classList.remove('hidden'))
+    document.getElementById('btn-abandon-cancel').addEventListener('click', () => modal.classList.add('hidden'))
+    document.getElementById('btn-abandon-confirm').addEventListener('click', async () => {
+      modal.classList.add('hidden')
+      const winner = isHost ? 'guest' : 'host'
+      await finishGame(winner)
+      window.location.href = BASE_URL + '/player/dashboard.html'
+    })
+  }
 
   // ============================================================
-  //  DOTS PROGRESSION
+  //  DOTS
   // ============================================================
   function buildDots(total) {
     const container = document.getElementById('rounds-dots')
@@ -623,8 +575,6 @@
   }
 
   function markPlayedDots(currentRound) {
-    // Les rounds déjà joués (0 à currentRound-1) — on ne sait pas le résultat
-    // donc on les marque juste comme joués (gris)
     for (let i = 0; i < currentRound; i++) {
       const dot = document.getElementById(`dot-${i}`)
       if (dot) { dot.classList.remove('current'); dot.classList.add('draw') }
@@ -637,9 +587,6 @@
     setEl('round-counter', `Round ${round} / ${total}`)
   }
 
-  // ============================================================
-  //  SCORES UI
-  // ============================================================
   function updateScoreUI() {
     setEl('score-me',   scoreMe)
     setEl('score-opp',  scoreOpp)
@@ -657,8 +604,7 @@
   function delay(ms) { return new Promise(r => setTimeout(r, ms)) }
 
   function showToast(message, type = 'info') {
-    const existing = document.querySelector('.pvp-toast')
-    if (existing) existing.remove()
+    document.querySelector('.pvp-toast')?.remove()
     const toast = document.createElement('div')
     toast.className = 'pvp-toast fixed top-20 right-4 z-50 px-5 py-3 rounded-xl font-rajdhani font-semibold text-white shadow-xl'
     toast.textContent = message
@@ -668,9 +614,6 @@
     setTimeout(() => toast.remove(), 3500)
   }
 
-  // ============================================================
-  //  THÈME
-  // ============================================================
   function initTheme() {
     const html  = document.documentElement
     const icon  = document.getElementById('themeIcon')
@@ -686,9 +629,6 @@
     }
   }
 
-  // ============================================================
-  //  LANCEMENT
-  // ============================================================
   init()
 
 })()
