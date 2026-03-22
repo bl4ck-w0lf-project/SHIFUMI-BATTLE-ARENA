@@ -11,14 +11,12 @@
   let currentRoom        = null
   let totalRounds        = 5
   let presenceChannel    = null
+  let notifyChannel      = null
   let expiryTimer        = null
   let pollTimer          = null
   let onlinePlayers      = {}
   let guestAlreadyJoined = false
 
-  // ============================================================
-  //  INIT
-  // ============================================================
   async function init() {
     const { data: { session } } = await sb.auth.getSession()
     if (!session) {
@@ -53,9 +51,6 @@
     await initPresence()
   }
 
-  // ============================================================
-  //  SÉLECTEUR DE ROUNDS
-  // ============================================================
   function initRoundsSelector() {
     document.querySelectorAll('.rounds-btn').forEach(btn => {
       btn.addEventListener('click', function () {
@@ -66,9 +61,6 @@
     })
   }
 
-  // ============================================================
-  //  PRESENCE
-  // ============================================================
   async function initPresence() {
     presenceChannel = sb.channel('shifumi-presence', {
       config: { presence: { key: currentUser.id } }
@@ -103,9 +95,6 @@
       })
   }
 
-  // ============================================================
-  //  LISTE DES JOUEURS EN LIGNE
-  // ============================================================
   function renderOnlinePlayers() {
     const container = document.getElementById('online-players-list')
     const badge     = document.getElementById('online-badge')
@@ -181,9 +170,6 @@
     })
   }
 
-  // ============================================================
-  //  CRÉER UNE SALLE
-  // ============================================================
   document.getElementById('btn-create-room').addEventListener('click', async () => {
     const btn = document.getElementById('btn-create-room')
     btn.disabled = true
@@ -216,7 +202,8 @@
       })
 
       showRoomScreen(room)
-      startPolling(room.id)
+      listenForGuest(room.id)   // ★ broadcast
+      startPolling(room.id)     // polling backup
       startExpiryCountdown(room.expires_at)
 
     } catch (err) {
@@ -227,14 +214,10 @@
     }
   })
 
-  // ============================================================
-  //  AFFICHER L'ÉCRAN SALLE
-  // ============================================================
   function showRoomScreen(room) {
     document.getElementById('screen-setup').classList.add('hidden')
     document.getElementById('screen-room').classList.remove('hidden')
 
-    // Code avec cases stylisées
     const codeDisplay = document.getElementById('room-code-display')
     codeDisplay.innerHTML = room.code.split('').map((char, i) => `
       <div class="code-char dark:bg-[rgba(2,183,245,0.1)] bg-[rgba(2,183,245,0.08)]
@@ -267,8 +250,24 @@
   }
 
   // ============================================================
-  //  POLLING — toutes les 3s
-  //  Dès que guest_id est rempli → les deux vont sur game_pvp
+  //  ★ BROADCAST — notification instantanée du guest
+  // ============================================================
+  function listenForGuest(roomId) {
+    notifyChannel?.unsubscribe()
+    notifyChannel = sb.channel(`notify-host-${roomId}`)
+    notifyChannel
+      .on('broadcast', { event: 'guest_joined' }, () => {
+        if (!guestAlreadyJoined) {
+          guestAlreadyJoined = true
+          stopPolling()
+          goToGame(roomId)
+        }
+      })
+      .subscribe()
+  }
+
+  // ============================================================
+  //  POLLING — backup toutes les 3s
   // ============================================================
   function startPolling(roomId) {
     stopPolling()
@@ -281,14 +280,12 @@
           .eq('id', roomId)
           .single()
 
-        if (room?.guest_id && !guestAlreadyJoined) {
+        if ((room?.guest_id || room?.status === 'playing') && !guestAlreadyJoined) {
           guestAlreadyJoined = true
           stopPolling()
-          currentRoom = { ...currentRoom, guest_id: room.guest_id }
-          // ★ DIRECT — pas de bouton "Lancer", on y va tout de suite
           goToGame(roomId)
         }
-      } catch (e) { /* silencieux */ }
+      } catch (e) {}
     }, 3000)
   }
 
@@ -296,9 +293,6 @@
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
   }
 
-  // ============================================================
-  //  INVITER UN JOUEUR
-  // ============================================================
   window.invitePlayer = async function (toId, toUsername) {
     if (!currentRoom) { showToast('Crée une salle d\'abord !', 'warning'); return }
     try {
@@ -318,16 +312,11 @@
         room_id: currentRoom.id
       })
       showToast(`Invitation envoyée à @${toUsername} !`, 'success')
-
     } catch (err) {
-      console.error('Erreur invitation:', err)
       showToast('Erreur lors de l\'envoi de l\'invitation', 'error')
     }
   }
 
-  // ============================================================
-  //  ANNULER LA SALLE
-  // ============================================================
   document.getElementById('btn-cancel-room').addEventListener('click', async () => {
     if (!currentRoom) return
     await cancelRoom()
@@ -341,6 +330,7 @@
   async function cancelRoom() {
     if (!currentRoom) return
     stopPolling()
+    notifyChannel?.unsubscribe()
     try {
       await sb.from('multiplayer_rooms')
         .update({ status: 'abandoned', expires_at: new Date().toISOString() })
@@ -356,9 +346,6 @@
     } catch (err) { console.error('Erreur annulation:', err) }
   }
 
-  // ============================================================
-  //  COUNTDOWN EXPIRATION
-  // ============================================================
   function startExpiryCountdown(expiresAt) {
     const el = document.getElementById('expiry-countdown')
     if (!el) return
@@ -382,11 +369,9 @@
     }, 1000)
   }
 
-  // ============================================================
-  //  ALLER À LA PARTIE
-  // ============================================================
   function goToGame(roomId) {
     stopPolling()
+    notifyChannel?.unsubscribe()
     if (expiryTimer) clearInterval(expiryTimer)
     presenceChannel?.track({
       user_id:  currentUser.id,
@@ -394,12 +379,9 @@
       status:   'in_game',
       since:    new Date().toISOString()
     })
-    window.location.href = `${BASE_URL}/room/game_pvp.html?room=${roomId}`
+    window.location.href = `https://shifumi-battle-arena.vercel.app/room/game_pvp.html?room=${roomId}`
   }
 
-  // ============================================================
-  //  HELPERS
-  // ============================================================
   function generateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     let code = ''
