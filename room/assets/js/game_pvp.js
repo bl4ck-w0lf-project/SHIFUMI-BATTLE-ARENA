@@ -596,15 +596,16 @@
   //  ABANDON
   // ============================================================
   function initAbandon() {
-    const modal = document.getElementById('modal-abandon')
-    document.getElementById('btn-abandon').addEventListener('click', () => modal.classList.remove('hidden'))
-    document.getElementById('btn-abandon-cancel').addEventListener('click', () => modal.classList.add('hidden'))
-    document.getElementById('btn-abandon-confirm').addEventListener('click', async () => {
-      modal.classList.add('hidden')
-      const winner = isHost ? 'guest' : 'host'
-      await finishGame(winner)
-    })
-  }
+  const modal = document.getElementById('modal-abandon')
+  document.getElementById('btn-abandon').addEventListener('click', () => modal.classList.remove('hidden'))
+  document.getElementById('btn-abandon-cancel').addEventListener('click', () => modal.classList.add('hidden'))
+  document.getElementById('btn-abandon-confirm').addEventListener('click', async () => {
+    modal.classList.add('hidden')
+    const winner = isHost ? 'guest' : 'host'
+    await finishGame(winner)
+    window.location.href = BASE_URL + '/player/dashboard.html'
+  })
+}
 
   // ============================================================
   //  DOTS PROGRESSION
