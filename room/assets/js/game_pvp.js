@@ -400,6 +400,10 @@
 
       if (nextRound >= data.total_rounds) {
         await finishGame(null, hostScore, guestScore)
+        // ★ FIX — HOST affiche le résultat final directement
+        // sans attendre le polling (qui est stoppé dans finishGame)
+        const { data: final } = await sb.from('multiplayer_rooms').select('*').eq('id', room.id).single()
+        if (final) showFinalResult(final)
       } else {
         // ★ FIX — incrémenter expectedRound AVANT de mettre à jour la BDD
         expectedRound = nextRound
@@ -496,7 +500,11 @@
   // ============================================================
   //  TERMINER LA PARTIE
   // ============================================================
+  let gameOver = false  // ★ flag global — ignore la présence une fois terminé
+
   async function finishGame(forcedWinner = null, hostScore = null, guestScore = null) {
+    if (gameOver) return  // évite double appel
+    gameOver = true
     clearInterval(countdownInterval)
     stopPollResult()
 
@@ -564,6 +572,8 @@
 
   let disconnectCountdown = 30
   function handleOpponentDisconnect() {
+    // ★ Ne pas déclencher si la partie est déjà terminée
+    if (gameOver) return
     if (disconnectTimer) return
     document.getElementById('disconnect-warning')?.classList.remove('hidden')
     disconnectCountdown = 30
@@ -588,8 +598,12 @@
   //  RÉSULTAT FINAL
   // ============================================================
   function showFinalResult(updatedRoom) {
+    gameOver = true  // ★ marquer comme terminé dès l'affichage
     clearInterval(countdownInterval)
     stopPollResult()
+    // Stopper le timer de déconnexion s'il tourne encore
+    if (disconnectTimer) { clearInterval(disconnectTimer); disconnectTimer = null }
+    document.getElementById('disconnect-warning')?.classList.add('hidden')
     presenceChannel?.track({
       user_id: currentUser.id, username: currentProfile?.username || '',
       status: 'online', since: new Date().toISOString()
