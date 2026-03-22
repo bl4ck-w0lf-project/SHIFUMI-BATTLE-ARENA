@@ -120,7 +120,7 @@
     const badge     = document.getElementById('online-badge')
     if (!container) return
 
-    const others = Object.values(onlinePlayers).filter(p => p.user_id !== currentUser.id)
+    const others = Object.values(onlinePlayers).filter(p => p.user_id !== currentUser.id && p.role !== 'admin')
     badge.textContent = others.length + ' en ligne'
 
     if (others.length === 0) {
@@ -409,28 +409,38 @@
     }
   }
 
-  function listenInvitationResponse(roomId, toUsername) {
-    const ch = sb.channel(`inv-response-${roomId}-${Date.now()}`)
-      .on('postgres_changes', {
-        event:  'UPDATE',
-        schema: 'public',
-        table:  'invitations',
-        filter: `room_id=eq.${roomId}`
-      }, (payload) => {
-        const inv = payload.new
-        if (inv.status === 'declined') {
-          showToast(`@${toUsername} a refusé l'invitation`, 'warning')
-          ch.unsubscribe()
-        } else if (inv.status === 'accepted') {
-          showToast(`@${toUsername} a accepté ! En attente de connexion…`, 'success')
-          ch.unsubscribe()
-        } else if (inv.status === 'expired') {
-          showToast(`Invitation à @${toUsername} expirée`, 'warning')
-          ch.unsubscribe()
+ function listenInvitationResponse(roomId, toUsername) {
+  const ch = sb.channel(`inv-response-${roomId}-${Date.now()}`)
+    .on('postgres_changes', {
+      event:  'UPDATE',
+      schema: 'public',
+      table:  'invitations',
+      filter: `room_id=eq.${roomId}`
+    }, async (payload) => {
+      const inv = payload.new
+      if (inv.status === 'declined') {
+        showToast(`@${toUsername} a refusé l'invitation`, 'warning')
+        ch.unsubscribe()
+      } else if (inv.status === 'accepted') {
+        showToast(`@${toUsername} a accepté !`, 'success')
+        ch.unsubscribe()
+        // Récupérer le guest_id depuis la salle
+        const { data: room } = await sb
+          .from('multiplayer_rooms')
+          .select('guest_id')
+          .eq('id', roomId)
+          .single()
+        if (room?.guest_id) {
+          currentRoom = { ...currentRoom, guest_id: room.guest_id }
+          await onGuestJoined(room.guest_id)
         }
-      })
-      .subscribe()
-  }
+      } else if (inv.status === 'expired') {
+        showToast(`Invitation à @${toUsername} expirée`, 'warning')
+        ch.unsubscribe()
+      }
+    })
+    .subscribe()
+}
 
   // ============================================================
   //  ANNULER LA SALLE
