@@ -10,16 +10,20 @@
   let currentProfile    = null
   let room              = null
   let isHost            = false
-  let selectedMove      = null   // coup sélectionné mais pas encore soumis
-  let myMove            = null   // coup soumis en BDD
+  let selectedMove      = null
+  let myMove            = null
   let roundChannel      = null
   let presenceChannel   = null
   let countdownInterval = null
-  let pollInterval      = null   // ★ polling pour détecter résultat
+  let pollInterval      = null
   let disconnectTimer   = null
   let roundInProgress   = false
   let presenceReady     = false
-  let processingResult  = false  // évite double traitement
+  let processingResult  = false
+
+  // ★ FIX — numéro du round en cours côté client
+  // Empêche le polling de traiter un ancien round déjà traité
+  let expectedRound = 0
 
   let scoreMe   = 0
   let scoreOpp  = 0
@@ -32,12 +36,12 @@
     timeout:  { label: 'TIMEOUT', beats: null        },
   }
 
-  const SCISSORS_PATH = `M 11.40625 6.96875 C 10.578125 6.953125 9.890625 7.125 9.46875 7.25 L 6.9375 8.03125 C 4.003906 8.933594 2 11.652344 2 14.71875 L 2 20 C 2 23.855469 5.144531 27 9 27 L 18.90625 27 C 20.125 27.027344 21.304688 26.3125 21.78125 25.125 C 22.082031 24.371094 22.039063 23.578125 21.75 22.875 C 22.363281 22.550781 22.882813 22.027344 23.15625 21.34375 C 23.46875 20.558594 23.417969 19.722656 23.09375 19 L 27 19 C 28.644531 19 30 17.644531 30 16 C 30 14.355469 28.644531 13 27 13 L 25.46875 13 L 25.875 12.875 C 27.449219 12.398438 28.351563 10.699219 27.875 9.125 C 27.398438 7.550781 25.699219 6.648438 24.125 7.125 L 15.6875 9.71875 C 15.613281 9.53125 15.527344 9.328125 15.40625 9.125 C 14.90625 8.289063 13.894531 7.34375 12.28125 7.0625 C 11.980469 7.011719 11.683594 6.972656 11.40625 6.96875 Z M 25.125 9 C 25.515625 9.042969 25.847656 9.3125 25.96875 9.71875 C 26.132813 10.257813 25.820313 10.804688 25.28125 10.96875 L 18.4375 13.03125 L 18.78125 14.15625 L 18.78125 15 L 27 15 C 27.566406 15 28 15.433594 28 16 C 28 16.566406 27.566406 17 27 17 L 20.40625 17 L 17.78125 15.96875 C 17.402344 15.816406 17.011719 15.742188 16.625 15.75 L 16.09375 11.65625 L 24.71875 9.03125 C 24.855469 8.988281 24.996094 8.984375 25.125 9 Z M 11.375 9.03125 C 11.566406 9.03125 11.765625 9.03125 11.9375 9.0625 C 13.011719 9.25 13.425781 9.71875 13.6875 10.15625 C 13.949219 10.59375 13.96875 10.90625 13.96875 10.90625 L 14.8125 17.40625 C 14.96875 18.027344 14.652344 18.53125 14.125 18.65625 C 13.800781 18.734375 13.636719 18.691406 13.46875 18.59375 C 13.300781 18.496094 13.09375 18.289063 12.9375 17.84375 L 11.6875 13 C 11.609375 12.703125 11.398438 12.460938 11.121094 12.339844 C 10.839844 12.21875 10.519531 12.230469 10.25 12.375 L 8.59375 13.28125 C 8.109375 13.546875 7.933594 14.15625 8.203125 14.640625 C 8.46875 15.125 9.078125 15.300781 9.5625 15.03125 L 10.0625 14.75 L 11.03125 18.4375 C 11.332031 19.304688 11.792969 19.925781 12.4375 20.3125 C 12.964844 20.628906 13.578125 20.75 14.1875 20.6875 C 13.871094 20.980469 13.609375 21.355469 13.4375 21.78125 C 12.980469 22.925781 13.269531 24.183594 14.09375 25 L 9 25 C 6.226563 25 4 22.773438 4 20 L 4 14.71875 C 4 12.519531 5.429688 10.585938 7.53125 9.9375 L 10.03125 9.1875 C 10.234375 9.125 10.804688 9.03125 11.375 9.03125 Z M 16.8125 17.78125 C 16.886719 17.792969 16.957031 17.78125 17.03125 17.8125 L 20.75 19.3125 C 21.273438 19.523438 21.523438 20.070313 21.3125 20.59375 C 21.101563 21.117188 20.523438 21.367188 20 21.15625 L 16.28125 19.6875 C 16.226563 19.667969 16.203125 19.621094 16.15625 19.59375 C 16.550781 19.085938 16.804688 18.445313 16.8125 17.78125 Z M 16.1875 21.90625 C 16.320313 21.90625 16.460938 21.917969 16.59375 21.96875 L 17.9375 22.5 L 19.25 23.03125 L 19.375 23.0625 C 19.898438 23.273438 20.148438 23.851563 19.9375 24.375 C 19.785156 24.757813 19.445313 24.980469 19.0625 25 C 18.898438 25.003906 18.757813 24.988281 18.625 24.9375 L 15.84375 23.8125 C 15.320313 23.601563 15.070313 23.023438 15.28125 22.5 C 15.386719 22.238281 15.578125 22.070313 15.8125 21.96875 C 15.929688 21.917969 16.054688 21.90625 16.1875 21.90625 Z`
+  const SCISSORS_PATH = `M 11.40625 6.96875 C 10.578125 6.953125 9.890625 7.125 9.46875 7.25 L 6.9375 8.03125 C 4.003906 8.933594 2 11.652344 2 14.71875 L 2 20 C 2 23.855469 5.144531 27 9 27 L 18.90625 27 C 20.125 27.027344 21.304688 26.3125 21.78125 25.125 C 22.082031 24.371094 22.039063 23.578125 21.75 22.875 C 22.363281 22.550781 22.882813 22.027344 23.15625 21.34375 C 23.46875 20.558594 23.417969 19.722656 23.09375 19 L 27 19 C 28.644531 19 30 17.644531 30 16 C 30 14.355469 28.644531 13 27 13 L 25.46875 13 L 25.875 12.875 C 27.449219 12.398438 28.351563 10.699219 27.875 9.125 C 27.398438 7.550781 25.699219 6.648438 24.125 7.125 L 15.6875 9.71875 C 15.613281 9.53125 15.527344 9.328125 15.40625 9.125 C 14.90625 8.289063 13.894531 7.34375 12.28125 7.0625 C 11.980469 7.011719 11.683594 6.972656 11.40625 6.96875 Z M 25.125 9 C 25.515625 9.042969 25.847656 9.3125 25.96875 9.71875 C 26.132813 10.257813 25.820313 10.804688 25.28125 10.96875 L 18.4375 13.03125 L 18.78125 14.15625 L 18.78125 15 L 27 15 C 27.566406 15 28 15.433594 28 16 C 28 16.566406 27.566406 17 27 17 L 20.40625 17 L 17.78125 15.96875 C 17.402344 15.816406 17.011719 15.742188 16.625 15.75 L 16.09375 11.65625 L 24.71875 9.03125 C 24.855469 8.988281 24.996094 8.984375 25.125 9 Z M 11.375 9.03125 C 11.566406 9.03125 11.765625 9.03125 11.9375 9.0625 C 13.011719 9.25 13.425781 9.71875 13.6875 10.15625 C 13.949219 10.59375 13.96875 10.90625 13.96875 10.90625 L 14.8125 17.40625 C 14.96875 18.027344 14.652344 18.53125 14.125 18.65625 C 13.800781 18.734375 13.636719 18.691406 13.46875 18.59375 C 13.300781 18.496094 13.09375 18.289063 12.9375 17.84375 L 11.6875 13 C 11.609375 12.703125 11.398438 12.460938 11.121094 12.339844 C 10.839844 12.21875 10.519531 12.230469 10.25 12.375 L 8.59375 13.28125 C 8.109375 13.546875 7.933594 14.15625 8.203125 14.640625 C 8.46875 15.125 9.078125 15.300781 9.5625 15.03125 L 10.0625 14.75 L 11.03125 18.4375 C 11.332031 19.304688 11.792969 19.925781 12.4375 20.3125 C 12.964844 20.628906 13.578125 20.75 14.1875 20.6875 C 13.871094 20.980469 13.609375 21.355469 13.4375 21.78125 C 12.980469 22.925781 13.269531 24.183594 14.09375 25 L 9 25 C 6.226563 25 4 22.773438 4 20 L 4 14.71875 C 4 12.519531 5.429688 10.585938 7.53125 9.9375 L 10.03125 9.1875 C 10.234375 9.125 10.804688 9.03125 11.375 9.03125 Z M 16.8125 17.78125 C 16.886719 17.792969 16.957031 17.78125 17.03125 17.8125 L 20.75 19.3125 C 21.273438 19.523438 21.523438 20.070313 21.3125 20.59375 C 21.101563 21.117188 20.523438 21.367188 20 21.15625 L 16.28125 19.6875 C 16.226563 19.667969 16.203125 19.621094 16.15625 19.59375 C 16.550781 19.085938 16.804688 18.445313 16.8125 17.78125 Z M 16.1875 21.90625 C 16.320313 21.90625 16.460938 21.917969 16.59375 21.96875 L 17.9375 22.5 L 19.25 23.03125 L 19.375 23.0625 C 19.898438 23.273438 20.148438 23.851563 19.9375 24.375 C 19.785156 24.757813 19.445313 24.980469 19.0625 25 C 19.050781 25 19.042969 25 19.03125 25 C 18.898438 25.003906 18.757813 24.988281 18.625 24.9375 L 15.84375 23.8125 C 15.320313 23.601563 15.070313 23.023438 15.28125 22.5 C 15.386719 22.238281 15.578125 22.070313 15.8125 21.96875 C 15.929688 21.917969 16.054688 21.90625 16.1875 21.90625 Z`
 
   function moveSVG(move, color) {
-    if (move === 'timeout') return `<i class="fa-solid fa-hourglass-end" style="font-size:36px;color:${color}"></i>`
-    if (move === 'rock')    return `<svg width="48" height="48" viewBox="0 0 256 256" fill="${color}"><path d="M200,80H184V64a31.97943,31.97943,0,0,0-56-21.13208A31.97443,31.97443,0,0,0,72.20508,60.4231,31.978,31.978,0,0,0,24,88v40a104,104,0,0,0,208,0V112A32.03635,32.03635,0,0,0,200,80ZM152,48a16.01833,16.01833,0,0,1,16,16V80H136V64A16.01833,16.01833,0,0,1,152,48ZM88,64a16,16,0,0,1,32,0v40a16,16,0,0,1-32,0V64ZM40,88a16,16,0,0,1,32,0v16a16,16,0,0,1-32,0Zm88,128a88.10627,88.10627,0,0,1-87.9209-84.249A31.94065,31.94065,0,0,0,80,125.13208a31.92587,31.92587,0,0,0,44.58057,3.34595,32.23527,32.23527,0,0,0,11.79443,11.4414A47.906,47.906,0,0,0,120,176a8,8,0,0,0,16,0,32.03635,32.03635,0,0,1,32-32,8,8,0,0,0,0-16H152a16.01833,16.01833,0,0,1-16-16V96h64a16.01833,16.01833,0,0,1,16,16v16A88.09957,88.09957,0,0,1,128,216Z"/></svg>`
-    if (move === 'paper')   return `<svg width="48" height="48" viewBox="0 0 485 485" fill="${color}"><path d="M382.5,69.429c-7.441,0-14.5,1.646-20.852,4.573c-4.309-23.218-24.7-40.859-49.148-40.859c-7.68,0-14.958,1.744-21.467,4.852C285.641,16.205,265.932,0,242.5,0c-23.432,0-43.141,16.206-48.533,37.995c-6.508-3.107-13.787-4.852-21.467-4.852c-27.57,0-50,22.43-50,50v122.222c-6.129-2.686-12.891-4.187-20-4.187c-27.57,0-50,22.43-50,50V354c0,72.233,58.766,131,131,131h118c72.233,0,131-58.767,131-131V119.429C432.5,91.858,410.07,69.429,382.5,69.429z M402.5,354c0,55.691-45.309,101-101,101h-118c-55.691,0-101-45.309-101-101V251.178c0-11.028,8.972-20,20-20s20,8.972,20,20v80h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30V50c0-11.028,8.972-20,20-20c11.028,0,20,8.972,20,20v191.178h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30v-121.75c0-11.028,8.972-20,20-20s20,8.972,20,20V354z"/></svg>`
+    if (move === 'timeout')  return `<i class="fa-solid fa-hourglass-end" style="font-size:36px;color:${color}"></i>`
+    if (move === 'rock')     return `<svg width="48" height="48" viewBox="0 0 256 256" fill="${color}"><path d="M200,80H184V64a31.97943,31.97943,0,0,0-56-21.13208A31.97443,31.97443,0,0,0,72.20508,60.4231,31.978,31.978,0,0,0,24,88v40a104,104,0,0,0,208,0V112A32.03635,32.03635,0,0,0,200,80ZM152,48a16.01833,16.01833,0,0,1,16,16V80H136V64A16.01833,16.01833,0,0,1,152,48ZM88,64a16,16,0,0,1,32,0v40a16,16,0,0,1-32,0V64ZM40,88a16,16,0,0,1,32,0v16a16,16,0,0,1-32,0Zm88,128a88.10627,88.10627,0,0,1-87.9209-84.249A31.94065,31.94065,0,0,0,80,125.13208a31.92587,31.92587,0,0,0,44.58057,3.34595,32.23527,32.23527,0,0,0,11.79443,11.4414A47.906,47.906,0,0,0,120,176a8,8,0,0,0,16,0,32.03635,32.03635,0,0,1,32-32,8,8,0,0,0,0-16H152a16.01833,16.01833,0,0,1-16-16V96h64a16.01833,16.01833,0,0,1,16,16v16A88.09957,88.09957,0,0,1,128,216Z"/></svg>`
+    if (move === 'paper')    return `<svg width="48" height="48" viewBox="0 0 485 485" fill="${color}"><path d="M382.5,69.429c-7.441,0-14.5,1.646-20.852,4.573c-4.309-23.218-24.7-40.859-49.148-40.859c-7.68,0-14.958,1.744-21.467,4.852C285.641,16.205,265.932,0,242.5,0c-23.432,0-43.141,16.206-48.533,37.995c-6.508-3.107-13.787-4.852-21.467-4.852c-27.57,0-50,22.43-50,50v122.222c-6.129-2.686-12.891-4.187-20-4.187c-27.57,0-50,22.43-50,50V354c0,72.233,58.766,131,131,131h118c72.233,0,131-58.767,131-131V119.429C432.5,91.858,410.07,69.429,382.5,69.429z M402.5,354c0,55.691-45.309,101-101,101h-118c-55.691,0-101-45.309-101-101V251.178c0-11.028,8.972-20,20-20s20,8.972,20,20v80h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30V50c0-11.028,8.972-20,20-20c11.028,0,20,8.972,20,20v191.178h30V83.143c0-11.028,8.972-20,20-20s20,8.972,20,20v158.035h30v-121.75c0-11.028,8.972-20,20-20s20,8.972,20,20V354z"/></svg>`
     if (move === 'scissors') return `<svg width="48" height="48" viewBox="0 0 32 32" fill="${color}"><path d="${SCISSORS_PATH}"/></svg>`
     return `<svg width="40" height="40" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="28" stroke="${color}" stroke-width="3" stroke-dasharray="6 6" fill="none"/><circle cx="40" cy="40" r="4" fill="${color}"/></svg>`
   }
@@ -87,8 +91,10 @@
       return
     }
 
-    room   = roomData
-    isHost = room.host_id === currentUser.id
+    room         = roomData
+    isHost       = room.host_id === currentUser.id
+    // ★ FIX — initialiser le round attendu depuis la BDD
+    expectedRound = room.current_round
 
     setEl('room-code-badge', room.code)
     const opponent = isHost ? room.guest : room.host
@@ -111,7 +117,6 @@
     initValidateButton()
     await initPresence()
 
-    // ★ HOST : set round_started_at et démarre le countdown
     if (isHost) {
       const now = new Date().toISOString()
       await sb.from('multiplayer_rooms')
@@ -120,11 +125,9 @@
         .eq('current_round', 0)
       startRound(now, room.countdown_seconds || 15)
     } else {
-      // ★ GUEST : attend round_started_at
       if (room.round_started_at) {
         startRound(room.round_started_at, room.countdown_seconds || 15)
       } else {
-        // Polling jusqu'à ce que le host set round_started_at
         const waitStart = setInterval(async () => {
           const { data } = await sb
             .from('multiplayer_rooms')
@@ -141,7 +144,7 @@
   }
 
   // ============================================================
-  //  SÉLECTION DES CARTES — sélection visuelle seulement
+  //  SÉLECTION DES CARTES
   // ============================================================
   function initCardSelection() {
     document.querySelectorAll('.choice-card').forEach(card => {
@@ -152,40 +155,43 @@
         this.classList.add('selected')
         selectedMove = this.dataset.move
 
-        // Afficher le coup sélectionné
         setEl('my-move-label', MOVES[selectedMove]?.label || selectedMove)
         document.getElementById('my-move-display').innerHTML = moveSVG(selectedMove, '#02b7f5')
 
-        // Activer le bouton valider
         const btn = document.getElementById('btn-validate')
-        btn.classList.remove('hidden')
-        btn.disabled = false
+        if (btn) { btn.classList.remove('hidden'); btn.disabled = false }
       })
     })
   }
 
   // ============================================================
-  //  BOUTON VALIDER — soumet le coup en BDD
+  //  BOUTON VALIDER — FIX : pas de console.log orphelin
   // ============================================================
   function initValidateButton() {
-    document.getElementById('btn-validate').addEventListener('click', async function () {
+    const btn = document.getElementById('btn-validate')
+    if (!btn) return
+
+    btn.addEventListener('click', async function () {
       if (!selectedMove || myMove || !roundInProgress) return
 
       myMove = selectedMove
       this.disabled = true
       this.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-2"></i> Envoi...'
 
-      // Désactiver les cartes
       document.querySelectorAll('.choice-card').forEach(c => c.classList.add('disabled'))
 
-      // Soumettre en BDD
       const moveCol = isHost ? 'host_move' : 'guest_move'
-      await sb.from('multiplayer_rooms')
+      const { error } = await sb.from('multiplayer_rooms')
         .update({ [moveCol]: myMove })
         .eq('id', room.id)
-        console.log('[VALIDATE ERROR]', error)
 
-              // ★ Arrêter le countdown
+      if (error) {
+        console.error('[VALIDATE ERROR]', error)
+        showToast('Erreur lors de l\'envoi du coup', 'error')
+        return
+      }
+
+      // Arrêter le countdown visuellement
       clearInterval(countdownInterval)
       const num  = document.getElementById('countdown-number')
       const ring = document.getElementById('countdown-ring')
@@ -195,12 +201,12 @@
       if (bar)  { bar.style.width = '100%'; bar.style.background = '#22c55e' }
 
       this.innerHTML = '<i class="fa-solid fa-check mr-2"></i> COUP SOUMIS !'
-      document.getElementById('my-status').classList.remove('hidden')
+      document.getElementById('my-status')?.classList.remove('hidden')
     })
   }
 
   // ============================================================
-  //  DÉMARRER UN ROUND
+  //  DÉMARRER UN ROUND — FIX : reset expectedRound
   // ============================================================
   function startRound(roundStartedAt, totalSeconds) {
     roundInProgress  = true
@@ -220,9 +226,11 @@
     if (oppEl) oppEl.className = 'font-rajdhani text-[10px] dark:text-[#475569] text-[#94a3b8] mt-1'
 
     const btn = document.getElementById('btn-validate')
-    btn.classList.add('hidden')
-    btn.disabled = true
-    btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> JOUER CE COUP'
+    if (btn) {
+      btn.classList.add('hidden')
+      btn.disabled = true
+      btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> JOUER CE COUP'
+    }
 
     startCountdown(roundStartedAt, totalSeconds)
     startPollResult()
@@ -270,7 +278,7 @@
   }
 
   // ============================================================
-  //  ★ POLLING — vérifie toutes les 2s si les deux ont joué
+  //  POLLING — FIX MAJEUR : vérification du round attendu
   // ============================================================
   function startPollResult() {
     stopPollResult()
@@ -285,16 +293,9 @@
 
         if (!data) return
 
-        // Mettre à jour l'affichage adversaire
-        const oppMove = isHost ? data.guest_move : data.host_move
-        if (oppMove && oppMove !== myMove) {
-          const oppEl = document.getElementById('opp-status')
-          if (oppEl && !oppEl.classList.contains('text-win')) {
-            setEl('opp-status', oppMove === 'timeout' ? '⏰ Timeout' : '✓ A joué')
-            oppEl.classList.remove('dark:text-[#475569]', 'text-[#94a3b8]')
-            oppEl.classList.add('text-win')
-          }
-        }
+        // ★ FIX CRITIQUE — ignorer si ce n'est pas le round qu'on attend
+        // Évite de traiter un ancien round déjà traité ou un round futur
+        if (data.current_round !== expectedRound) return
 
         // Partie terminée
         if (data.status === 'finished' || data.status === 'abandoned') {
@@ -304,13 +305,25 @@
           return
         }
 
-        // Les deux ont joué → traiter le résultat
+        // Afficher statut adversaire
+        const oppMove = isHost ? data.guest_move : data.host_move
+        if (oppMove) {
+          const oppEl = document.getElementById('opp-status')
+          if (oppEl && !oppEl.classList.contains('text-win')) {
+            setEl('opp-status', oppMove === 'timeout' ? '⏰ Timeout' : '✓ A joué')
+            oppEl.classList.remove('dark:text-[#475569]', 'text-[#94a3b8]')
+            oppEl.classList.add('text-win')
+          }
+        }
+
+        // ★ FIX — les deux ont joué ET les moves ne sont pas null (round frais)
         if (data.host_move && data.guest_move && !processingResult) {
           processingResult = true
           stopPollResult()
           clearInterval(countdownInterval)
           await processRoundResult(data)
         }
+
       } catch (e) { /* silencieux */ }
     }, 2000)
   }
@@ -325,7 +338,7 @@
   async function handleTimeout() {
     if (myMove) return
     selectedMove = 'timeout'
-    myMove = 'timeout'
+    myMove       = 'timeout'
     document.querySelectorAll('.choice-card').forEach(c => c.classList.add('disabled'))
     document.getElementById('btn-validate')?.classList.add('hidden')
     setEl('my-move-label', 'TIMEOUT')
@@ -339,7 +352,7 @@
   }
 
   // ============================================================
-  //  RÉSULTAT DU ROUND
+  //  RÉSULTAT DU ROUND — FIX : incrémenter expectedRound
   // ============================================================
   async function processRoundResult(data) {
     roundInProgress = false
@@ -370,7 +383,6 @@
     await delay(400)
     showRoundBanner(myResult, myMoveNow, oppMoveNow)
 
-    // ★ Seul le HOST gère la transition vers le prochain round
     if (isHost) {
       await delay(2000)
       const nextRound  = data.current_round + 1
@@ -380,11 +392,14 @@
       if (nextRound >= data.total_rounds) {
         await finishGame(null, hostScore, guestScore)
       } else {
+        // ★ FIX — incrémenter expectedRound AVANT de mettre à jour la BDD
+        expectedRound = nextRound
+
         const newStart = new Date().toISOString()
         await sb.from('multiplayer_rooms').update({
           current_round:    nextRound,
-          host_move:        null,
-          guest_move:       null,
+          host_move:        null,      // ★ reset les coups
+          guest_move:       null,      // ★ reset les coups
           round_started_at: newStart,
           host_score:       hostScore,
           guest_score:      guestScore,
@@ -395,11 +410,10 @@
         startRound(newStart, data.countdown_seconds || 15)
       }
     } else {
-      // ★ GUEST : attend le prochain round via polling
+      // GUEST — attend que le HOST mette à jour la BDD
       await delay(2000)
       updateRoundCounter(data.current_round + 1, data.total_rounds)
 
-      // Polling pour détecter le nouveau round_started_at
       const waitNext = setInterval(async () => {
         const { data: next } = await sb
           .from('multiplayer_rooms')
@@ -411,18 +425,16 @@
 
         if (next.status === 'finished') {
           clearInterval(waitNext)
-          const { data: final } = await sb
-            .from('multiplayer_rooms')
-            .select('*')
-            .eq('id', room.id)
-            .single()
+          const { data: final } = await sb.from('multiplayer_rooms').select('*').eq('id', room.id).single()
           if (final) showFinalResult(final)
           return
         }
 
-        // Nouveau round détecté (moves remis à null par le host)
-        if (next.current_round > data.current_round && !next.host_move && !next.guest_move) {
+        // ★ FIX — nouveau round détecté : current_round a changé ET les deux moves sont null
+        if (next.current_round > data.current_round && next.host_move === null && next.guest_move === null) {
           clearInterval(waitNext)
+          // ★ FIX — mettre à jour expectedRound côté guest aussi
+          expectedRound = next.current_round
           updateRoundCounter(next.current_round + 1, data.total_rounds)
           startRound(next.round_started_at, next.countdown_seconds || 15)
         }
@@ -682,9 +694,6 @@
     setEl('score-draw', scoreDraw)
   }
 
-  // ============================================================
-  //  HELPERS
-  // ============================================================
   function setEl(id, value) {
     const el = document.getElementById(id)
     if (el) el.textContent = value
