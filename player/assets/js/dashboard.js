@@ -22,8 +22,7 @@
     if (!session) { window.location.href = BASE_URL + '/player/connexion.html'; return }
     currentUser = session.user
 
-
-      // ★ FIX PAGE BLANCHE
+    // ★ FIX PAGE BLANCHE
     document.body.style.visibility = 'visible'
     document.body.style.opacity    = '1'
 
@@ -47,7 +46,7 @@
       document.getElementById('welcome-name').textContent = 'Bienvenue, ' + profile.first_name
     }
 
-    await Promise.all([loadMyStats(), loadLeaderboard(), initPresence()])
+    await Promise.all([loadMyStats(), loadLeaderboard(), initPresence(), loadPvpTop3()])
   }
 
   // ============================================================
@@ -138,7 +137,7 @@
   }
 
   // ============================================================
-  //  STATS PVP
+  //  STATS PVP (mes stats perso)
   // ============================================================
   function renderPvpStats(pvp) {
     const container = document.getElementById('pvp-stats-container')
@@ -202,6 +201,153 @@
           </a>
         </div>
       </div>`
+  }
+
+  // ============================================================
+  //  TOP 3 PVP — classement multijoueur
+  // ============================================================
+  async function loadPvpTop3() {
+    const { data: players } = await sb
+      .from('player_stats_pvp')
+      .select(`
+        profile_id,
+        total_games, wins, losses, draws,
+        win_rate, best_streak,
+        profiles!inner(first_name, last_name, username, avatar_url)
+      `)
+      .gt('total_games', 0)
+      .order('wins', { ascending: false })
+      .limit(3)
+
+    renderPvpTop3(players || [])
+  }
+
+  function renderPvpTop3(players) {
+    const container = document.getElementById('pvp-top3-container')
+    if (!container) return
+
+    if (players.length === 0) {
+      container.innerHTML = `
+        <div class="sm:col-span-3 text-center py-10">
+          <i class="fa-solid fa-users dark:text-[#2a3a4a] text-[#cbd5e1] text-3xl mb-3 block"></i>
+          <p class="font-rajdhani dark:text-[#475569] text-[#94a3b8] text-sm">Aucune donnée PvP disponible</p>
+        </div>`
+      return
+    }
+
+    // Ordre d'affichage podium : 2e (gauche) | 1er (centre surélevé) | 3e (droite)
+    const order = [
+      players[1] || null,
+      players[0] || null,
+      players[2] || null,
+    ]
+
+    const meta = [
+      {
+        rank: 2, label: '2ÈME',
+        cardClass: 'pvp-card-2', avatarClass: 'pvp-avatar-2', badgeClass: 'pvp-badge-2',
+        icon: '<i class="fa-solid fa-medal text-[#94a3b8] text-lg"></i>',
+        heightClass: ''
+      },
+      {
+        rank: 1, label: 'CHAMPION',
+        cardClass: 'pvp-card-1 pvp-card-champion', avatarClass: 'pvp-avatar-1', badgeClass: 'pvp-badge-1',
+        icon: '<i class="fa-solid fa-crown text-[#fbbf24] text-xl"></i>',
+        heightClass: ''
+      },
+      {
+        rank: 3, label: '3ÈME',
+        cardClass: 'pvp-card-3', avatarClass: 'pvp-avatar-3', badgeClass: 'pvp-badge-3',
+        icon: '<i class="fa-solid fa-medal text-[#f97316] text-lg"></i>',
+        heightClass: ''
+      },
+    ]
+
+    container.innerHTML = ''
+
+    order.forEach((player, i) => {
+      if (!player) return
+
+      const m        = meta[i]
+      const profile  = player.profiles
+      const initials = (profile.first_name[0] + profile.last_name[0]).toUpperCase()
+      const total    = player.total_games || 0
+      const wins     = player.wins        || 0
+      const losses   = player.losses      || 0
+      const draws    = player.draws       || 0
+      const wr       = total > 0 ? Math.round((wins / total) * 100) : 0
+      const isMe     = player.profile_id === currentUser.id
+
+      const avatarSizeClass = m.rank === 1 ? 'w-20 h-20 text-2xl pvp-champion-avatar' : 'w-16 h-16 text-lg'
+
+      const card = document.createElement('div')
+      card.className = `pvp-podium-card dark:bg-[#0d1b2a] bg-white ${m.cardClass} ${m.heightClass}`
+      card.innerHTML = `
+        <!-- Badge rang -->
+        <div class="flex items-center gap-1.5 ${m.badgeClass}">
+          ${m.icon}
+          <span class="font-orbitron font-black text-xs tracking-widest">${m.label}</span>
+        </div>
+
+        <!-- Avatar -->
+        <div class="relative">
+          <div class="${avatarSizeClass} rounded-full ${m.avatarClass} flex items-center justify-center
+                      text-white font-orbitron font-bold shadow-lg overflow-hidden">
+            ${profile.avatar_url
+              ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover" alt="avatar">`
+              : initials}
+          </div>
+          ${isMe ? `<div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+            <i class="fa-solid fa-user text-white text-[8px]"></i></div>` : ''}
+          <div class="presence-dot presence-offline absolute -bottom-0.5 -right-0.5"
+               data-presence="${player.profile_id}"></div>
+        </div>
+
+        <!-- Nom -->
+        <div class="text-center">
+          <div class="font-outfit font-semibold text-sm dark:text-white text-[#0a0f1e] truncate max-w-[140px]">
+            ${profile.first_name} ${profile.last_name}
+          </div>
+          <div class="font-rajdhani text-xs ${m.badgeClass}">@${profile.username}</div>
+        </div>
+
+        <!-- V / D / E -->
+        <div class="flex items-center gap-4">
+          <div class="flex flex-col items-center">
+            <span class="font-orbitron font-bold text-xl text-win">${wins}</span>
+            <span class="font-rajdhani text-[10px] uppercase dark:text-[#475569] text-[#94a3b8]">V</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <span class="font-orbitron font-bold text-xl text-lose">${losses}</span>
+            <span class="font-rajdhani text-[10px] uppercase dark:text-[#475569] text-[#94a3b8]">D</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <span class="font-orbitron font-bold text-xl text-draw">${draws}</span>
+            <span class="font-rajdhani text-[10px] uppercase dark:text-[#475569] text-[#94a3b8]">E</span>
+          </div>
+        </div>
+
+        <!-- Win rate bar -->
+        <div class="w-full">
+          <div class="flex justify-between mb-1">
+            <span class="font-rajdhani text-[10px] dark:text-[#94a3b8] text-[#475569]">Win rate</span>
+            <span class="font-rajdhani text-[10px] font-semibold text-win">${wr}%</span>
+          </div>
+          <div class="w-full h-1.5 dark:bg-[rgba(255,255,255,0.07)] bg-[rgba(0,0,0,0.07)] rounded-full">
+            <div class="h-full rounded-full progress-fill"
+                 style="width:${wr}%; background: linear-gradient(90deg,#a855f7,#22c55e)"></div>
+          </div>
+        </div>
+
+        <!-- Best streak -->
+        <div class="flex items-center gap-1.5">
+          <i class="fa-solid fa-fire text-draw text-xs"></i>
+          <span class="font-orbitron font-bold text-xs text-[#a855f7]">${player.best_streak || 0}</span>
+          <span class="font-rajdhani text-[10px] dark:text-[#475569] text-[#94a3b8]">série max</span>
+        </div>`
+
+      container.appendChild(card)
+    })
   }
 
   // ============================================================
@@ -498,8 +644,6 @@
   // ============================================================
   //  PRÉSENCE
   // ============================================================
-
-  // Met à jour un indicateur de présence par data-presence
   function updatePresenceDots(userId, status) {
     const label = {
       online:   'En ligne',
@@ -510,7 +654,7 @@
 
     document.querySelectorAll(`[data-presence="${userId}"]`).forEach(d => {
       d.className = `presence-dot presence-${status}`
-      d.title     = label  // tooltip au survol
+      d.title     = label
     })
   }
 
@@ -520,41 +664,31 @@
     })
 
     presenceChannel
-      // Sync complet — déclenché au subscribe + à chaque changement
       .on('presence', { event: 'sync' }, () => {
         const state = presenceChannel.presenceState()
 
-        // Compter les joueurs en ligne (hors soi-même pour éviter de se compter deux fois)
         const count = Object.keys(state).length
         const el    = document.getElementById('online-count')
         if (el) el.textContent = count + ' joueur' + (count !== 1 ? 's' : '') + ' en ligne'
 
-        // Reset tout le monde en offline d'abord
         document.querySelectorAll('[data-presence]').forEach(d => {
           d.className = 'presence-dot presence-offline'
           d.title     = 'Hors ligne'
         })
 
-        // Mettre à jour selon l'état actuel
         Object.values(state).forEach(presences => {
           const p = presences[0]; if (!p) return
           updatePresenceDots(p.user_id, p.status || 'online')
         })
       })
-
-      // Quelqu'un rejoint
       .on('presence', { event: 'join' }, ({ newPresences }) => {
         newPresences.forEach(p => updatePresenceDots(p.user_id, p.status || 'online'))
       })
-
-      // Quelqu'un part
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
         leftPresences.forEach(p => updatePresenceDots(p.user_id, 'offline'))
       })
-
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          // Tracker le joueur connecté comme "online"
           await presenceChannel.track({
             user_id: currentUser.id,
             username: currentProfile?.username || '',
@@ -567,7 +701,6 @@
     listenForInvitations()
   }
 
-  // Fonction exposée pour changer son statut depuis d'autres pages
   window.updateMyPresenceStatus = async function(status) {
     if (!presenceChannel) return
     await presenceChannel.track({
