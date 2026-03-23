@@ -227,48 +227,70 @@
     if (!container) return
 
     if (players.length === 0) {
+      container.className = ''
       container.innerHTML = `
-        <div class="sm:col-span-3 text-center py-10">
+        <div class="col-span-3 text-center py-10">
           <i class="fa-solid fa-users dark:text-[#2a3a4a] text-[#cbd5e1] text-3xl mb-3 block"></i>
           <p class="font-rajdhani dark:text-[#475569] text-[#94a3b8] text-sm">Aucune donnée PvP disponible</p>
         </div>`
       return
     }
 
-    // Ordre d'affichage podium : 2e (gauche) | 1er (centre surélevé) | 3e (droite)
-    const order = [
+    // Ordre podium : 2ème (gauche) | 1er/Champion (centre) | 3ème (droite)
+    const slots = [
       players[1] || null,
       players[0] || null,
       players[2] || null,
     ]
 
-    const meta = [
+    const cfg = [
       {
-        rank: 2, label: '2ÈME',
-        cardClass: 'pvp-card-2', avatarClass: 'pvp-avatar-2', badgeClass: 'pvp-badge-2',
-        icon: '<i class="fa-solid fa-medal text-[#94a3b8] text-lg"></i>',
-        heightClass: ''
+        rankLabel: '2ÈME',
+        rankIcon:  '<i class="fa-solid fa-medal"></i>',
+        rankClass: 'pvp-rank-2nd',
+        cardClass: 'pvp-card-2nd',
+        avClass:   'pvp-av pvp-av-2nd',
+        numSize:   'pvp-vde-n pvp-vde-n-md',
+        isChamp:   false,
       },
       {
-        rank: 1, label: 'CHAMPION',
-        cardClass: 'pvp-card-1 pvp-card-champion', avatarClass: 'pvp-avatar-1', badgeClass: 'pvp-badge-1',
-        icon: '<i class="fa-solid fa-crown text-[#fbbf24] text-xl"></i>',
-        heightClass: ''
+        rankLabel: 'CHAMPION',
+        rankIcon:  '<i class="fa-solid fa-crown"></i>',
+        rankClass: 'pvp-rank-champion',
+        cardClass: 'pvp-card-champion',
+        avClass:   'pvp-av pvp-av-champion',
+        numSize:   'pvp-vde-n pvp-vde-n-lg',
+        isChamp:   true,
       },
       {
-        rank: 3, label: '3ÈME',
-        cardClass: 'pvp-card-3', avatarClass: 'pvp-avatar-3', badgeClass: 'pvp-badge-3',
-        icon: '<i class="fa-solid fa-medal text-[#f97316] text-lg"></i>',
-        heightClass: ''
+        rankLabel: '3ÈME',
+        rankIcon:  '<i class="fa-solid fa-medal"></i>',
+        rankClass: 'pvp-rank-3rd',
+        cardClass: 'pvp-card-3rd',
+        avClass:   'pvp-av pvp-av-3rd',
+        numSize:   'pvp-vde-n pvp-vde-n-md',
+        isChamp:   false,
       },
     ]
 
+    container.className = 'pvp-podium-wrap'
     container.innerHTML = ''
 
-    order.forEach((player, i) => {
-      if (!player) return
+    slots.forEach((player, i) => {
+      const c = cfg[i]
 
-      const m        = meta[i]
+      if (!player) {
+        // Placeholder vide si moins de 3 joueurs
+        const empty = document.createElement('div')
+        empty.className = `pvp-podium-card ${c.cardClass}`
+        empty.style.opacity = '0.3'
+        empty.innerHTML = `<span class="pvp-rank-lbl ${c.rankClass}">${c.rankIcon} ${c.rankLabel}</span>
+          <div class="${c.avClass}">?</div>
+          <span class="pvp-fullname" style="color:#475569">—</span>`
+        container.appendChild(empty)
+        return
+      }
+
       const profile  = player.profiles
       const initials = (profile.first_name[0] + profile.last_name[0]).toUpperCase()
       const total    = player.total_games || 0
@@ -277,73 +299,65 @@
       const draws    = player.draws       || 0
       const wr       = total > 0 ? Math.round((wins / total) * 100) : 0
       const isMe     = player.profile_id === currentUser.id
-
-      const avatarSizeClass = m.rank === 1 ? 'w-20 h-20 text-2xl pvp-champion-avatar' : 'w-16 h-16 text-lg'
+      const streak   = player.best_streak || 0
 
       const card = document.createElement('div')
-      card.className = `pvp-podium-card dark:bg-[#0d1b2a] bg-white ${m.cardClass} ${m.heightClass}`
+      card.className = `pvp-podium-card ${c.cardClass}`
       card.innerHTML = `
-        <!-- Badge rang -->
-        <div class="flex items-center gap-1.5 ${m.badgeClass}">
-          ${m.icon}
-          <span class="font-orbitron font-black text-xs tracking-widest">${m.label}</span>
+        <!-- Rang -->
+        <div class="pvp-rank-lbl ${c.rankClass}">
+          ${c.rankIcon} ${c.rankLabel}
+          ${isMe ? '<span style="font-size:0.5rem;background:#02b7f5;color:#fff;padding:1px 5px;border-radius:99px;margin-left:4px;">MOI</span>' : ''}
         </div>
 
         <!-- Avatar -->
         <div class="relative">
-          <div class="${avatarSizeClass} rounded-full ${m.avatarClass} flex items-center justify-center
-                      text-white font-orbitron font-bold shadow-lg overflow-hidden">
+          <div class="${c.avClass}" style="position:relative;">
             ${profile.avatar_url
-              ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover" alt="avatar">`
+              ? `<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="avatar">`
               : initials}
           </div>
-          ${isMe ? `<div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-            <i class="fa-solid fa-user text-white text-[8px]"></i></div>` : ''}
-          <div class="presence-dot presence-offline absolute -bottom-0.5 -right-0.5"
-               data-presence="${player.profile_id}"></div>
+          <div class="presence-dot presence-offline"
+               data-presence="${player.profile_id}"
+               style="position:absolute;bottom:0;right:0;"></div>
         </div>
 
-        <!-- Nom -->
-        <div class="text-center">
-          <div class="font-outfit font-semibold text-sm dark:text-white text-[#0a0f1e] truncate max-w-[140px]">
-            ${profile.first_name} ${profile.last_name}
-          </div>
-          <div class="font-rajdhani text-xs ${m.badgeClass}">@${profile.username}</div>
-        </div>
+        <!-- Nom complet -->
+        <div class="pvp-fullname">${profile.first_name} ${profile.last_name}</div>
+        <div class="pvp-username ${c.rankClass}">@${profile.username}</div>
 
         <!-- V / D / E -->
-        <div class="flex items-center gap-4">
-          <div class="flex flex-col items-center">
-            <span class="font-orbitron font-bold text-xl text-win">${wins}</span>
-            <span class="font-rajdhani text-[10px] uppercase dark:text-[#475569] text-[#94a3b8]">V</span>
+        <div class="pvp-vde">
+          <div class="pvp-vde-col">
+            <span class="${c.numSize}" style="color:#22c55e">${wins}</span>
+            <span class="pvp-vde-lbl">V</span>
           </div>
-          <div class="flex flex-col items-center">
-            <span class="font-orbitron font-bold text-xl text-lose">${losses}</span>
-            <span class="font-rajdhani text-[10px] uppercase dark:text-[#475569] text-[#94a3b8]">D</span>
+          <div class="pvp-vde-col">
+            <span class="${c.numSize}" style="color:#ef4444">${losses}</span>
+            <span class="pvp-vde-lbl">D</span>
           </div>
-          <div class="flex flex-col items-center">
-            <span class="font-orbitron font-bold text-xl text-draw">${draws}</span>
-            <span class="font-rajdhani text-[10px] uppercase dark:text-[#475569] text-[#94a3b8]">E</span>
-          </div>
-        </div>
-
-        <!-- Win rate bar -->
-        <div class="w-full">
-          <div class="flex justify-between mb-1">
-            <span class="font-rajdhani text-[10px] dark:text-[#94a3b8] text-[#475569]">Win rate</span>
-            <span class="font-rajdhani text-[10px] font-semibold text-win">${wr}%</span>
-          </div>
-          <div class="w-full h-1.5 dark:bg-[rgba(255,255,255,0.07)] bg-[rgba(0,0,0,0.07)] rounded-full">
-            <div class="h-full rounded-full progress-fill"
-                 style="width:${wr}%; background: linear-gradient(90deg,#a855f7,#22c55e)"></div>
+          <div class="pvp-vde-col">
+            <span class="${c.numSize}" style="color:#f59e0b">${draws}</span>
+            <span class="pvp-vde-lbl">E</span>
           </div>
         </div>
 
-        <!-- Best streak -->
-        <div class="flex items-center gap-1.5">
-          <i class="fa-solid fa-fire text-draw text-xs"></i>
-          <span class="font-orbitron font-bold text-xs text-[#a855f7]">${player.best_streak || 0}</span>
-          <span class="font-rajdhani text-[10px] dark:text-[#475569] text-[#94a3b8]">série max</span>
+        <!-- Win rate -->
+        <div class="pvp-wr-wrap">
+          <div class="pvp-wr-row">
+            <span>Win rate</span>
+            <span>${wr}%</span>
+          </div>
+          <div class="pvp-wr-track">
+            <div class="pvp-wr-fill" style="width:${wr}%"></div>
+          </div>
+        </div>
+
+        <!-- Série max -->
+        <div class="pvp-streak">
+          <i class="fa-solid fa-fire" style="color:#f59e0b;font-size:0.75rem;"></i>
+          <strong>${streak}</strong>
+          <span>série max</span>
         </div>`
 
       container.appendChild(card)
