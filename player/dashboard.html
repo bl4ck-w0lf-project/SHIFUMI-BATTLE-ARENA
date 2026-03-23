@@ -54,7 +54,7 @@
     .sidebar-scroll::-webkit-scrollbar { width: 4px; }
     .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
     .sidebar-scroll::-webkit-scrollbar-thumb { background: #02b7f5; border-radius: 20px; }
-
+    
     /* Avatar ping */
     .avatar-ping::after {
       content: '';
@@ -72,7 +72,6 @@
     .stat-card-win:hover   { border-color: #22c55e !important; box-shadow: 0 0 20px rgba(34,197,94,0.15);  transform: translateY(-2px); }
     .stat-card-lose:hover  { border-color: #ef4444 !important; box-shadow: 0 0 20px rgba(239,68,68,0.15);  transform: translateY(-2px); }
     .stat-card-equal:hover { border-color: #f59e0b !important; box-shadow: 0 0 20px rgba(245,158,11,0.15); transform: translateY(-2px); }
-    
 
     /* Progress bars */
     .progress-fill { transition: width 1s ease; }
@@ -82,6 +81,7 @@
       background: linear-gradient(135deg, #fbbf24, #f59e0b);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      color: #94a3b8;
     }
 
     /* Sidebar mobile */
@@ -128,6 +128,86 @@
     /* Barre de niveau */
     .level-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
     .level-bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+
+    /* === TOP 3 PVP PODIUM CARDS === */
+    .pvp-podium-card {
+      position: relative;
+      border-radius: 1.25rem;
+      padding: 1.5rem 1.25rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      overflow: hidden;
+    }
+    .pvp-podium-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0.06;
+      pointer-events: none;
+    }
+    .pvp-podium-card:hover { transform: translateY(-4px); }
+
+    .pvp-card-1 {
+      border: 2px solid #fbbf24;
+      box-shadow: 0 0 30px rgba(251,191,36,0.18), 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .pvp-card-1::before { background: #fbbf24; }
+    .pvp-card-1:hover { box-shadow: 0 0 45px rgba(251,191,36,0.28), 0 12px 32px rgba(0,0,0,0.35); }
+
+    .pvp-card-2 {
+      border: 2px solid #94a3b8;
+      box-shadow: 0 0 20px rgba(148,163,184,0.15), 0 6px 18px rgba(0,0,0,0.25);
+    }
+    .pvp-card-2::before { background: #94a3b8; }
+    .pvp-card-2:hover { box-shadow: 0 0 30px rgba(148,163,184,0.22), 0 10px 28px rgba(0,0,0,0.3); }
+
+    .pvp-card-3 {
+      border: 2px solid #f97316;
+      box-shadow: 0 0 20px rgba(249,115,22,0.15), 0 6px 18px rgba(0,0,0,0.25);
+    }
+    .pvp-card-3::before { background: #f97316; }
+    .pvp-card-3:hover { box-shadow: 0 0 30px rgba(249,115,22,0.22), 0 10px 28px rgba(0,0,0,0.3); }
+
+    .pvp-avatar-1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+    .pvp-avatar-2 { background: linear-gradient(135deg, #94a3b8, #64748b); }
+    .pvp-avatar-3 { background: linear-gradient(135deg, #f97316, #ea580c); }
+
+    /* Champion card — plus grand, avatar plus grand, sans débordement */
+    .pvp-card-champion {
+      padding-top: 2rem;
+      padding-bottom: 2rem;
+    }
+    .pvp-card-champion .pvp-champion-avatar {
+      width: 5rem;
+      height: 5rem;
+      font-size: 1.5rem;
+    }
+
+    .pvp-badge-1 { color: #fbbf24; }
+    .pvp-badge-2 { color: #94a3b8; }
+    .pvp-badge-3 { color: #f97316; }
+
+    .pvp-stat-vde span {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+
+    /* Shimmer loader */
+    .pvp-shimmer {
+      background: linear-gradient(90deg,
+        rgba(255,255,255,0.04) 25%,
+        rgba(255,255,255,0.08) 50%,
+        rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 0.75rem;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
   </style>
 </head>
 
@@ -487,6 +567,26 @@
             </div>
             <div id="rate-hard" class="font-rajdhani text-xs dark:text-[#475569] text-[#94a3b8] mt-1 text-right">0%</div>
           </div>
+        </div>
+      </div>
+
+      <!-- ========== TOP 3 MULTIJOUEUR ========== -->
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2 font-rajdhani font-bold text-sm uppercase tracking-widest text-[#a855f7]">
+            <i class="fa-solid fa-crown"></i> TOP 3 MULTIJOUEUR
+          </div>
+          <span class="font-rajdhani text-xs px-2 py-1 rounded-full border border-[#a855f7] text-[#a855f7] bg-[rgba(168,85,247,0.06)]">
+            Classement PvP
+          </span>
+        </div>
+
+        <div id="pvp-top3-container"
+             class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
+          <!-- Shimmer loaders -->
+          <div class="pvp-shimmer h-52"></div>
+          <div class="pvp-shimmer h-52"></div>
+          <div class="pvp-shimmer h-52"></div>
         </div>
       </div>
 
